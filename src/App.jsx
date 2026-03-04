@@ -5,6 +5,7 @@ import { calculateYao, calculateFinalHexagram } from './utils/divination';
 
 // 引入拆分后的组件
 import Header from './components/Header';
+import Footer from './components/Footer';
 import ModeTabs from './components/ModeTabs';
 import CoinStage from './components/CoinStage';
 import ControlPanel from './components/ControlPanel';
@@ -156,6 +157,10 @@ function App() {
     ? hexagramDetails.find(d => d.title.includes(finalGuaInfo.benGua.name))
     : null;
 
+  const zhiDetail = finalGuaInfo?.zhiGua
+    ? hexagramDetails.find(d => d.title.includes(finalGuaInfo.zhiGua.name))
+    : null;
+
   // --- 渲染 ---
   const isInteracting = status !== 'idle' && status !== 'finished';
 
@@ -196,9 +201,11 @@ function App() {
       {finalGuaInfo && (
           <>
             <GuaResultStage history={history} finalGuaInfo={finalGuaInfo} />
-            <GuaDetailStage detail={currentDetail} />
+            <GuaDetailStage detail={currentDetail} zhiDetail={zhiDetail} history={history} />
           </>
       )}
+
+      <Footer />
       
     </div>
   );
