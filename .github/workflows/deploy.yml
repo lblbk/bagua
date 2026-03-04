@@ -23,6 +23,10 @@ jobs:
           node-version: '22'  # 根据你的项目需求调整版本
           cache: 'npm'
 
+      - name: Get Short SHA
+        id: vars
+        run: echo "VITE_COMMIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
       - name: Install dependencies
         run: npm ci
 

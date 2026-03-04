@@ -1,6 +1,7 @@
 import React from 'react';
 
 const Footer = () => {
+  const commitHash = import.meta.env.VITE_COMMIT_SHA || 'dev';
   const currentYear = new Date().getFullYear();
 
   return (
@@ -13,7 +14,7 @@ const Footer = () => {
         
         {/* 版权信息 */}
         <p className="text-[10px] text-gray-400">
-          © {currentYear} 八卦 v0.0.0
+          © {currentYear} | v{__APP_VERSION__} ({commitHash})
         </p>
         
         {/* 装饰线 */}
