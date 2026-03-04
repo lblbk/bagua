@@ -1,7 +1,7 @@
 import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 
-const IMG_HEADS = "https://picui.ogmua.cn/s1/2026/03/03/69a67e92042bf.webp";
-const IMG_TAILS = "https://picui.ogmua.cn/s1/2026/03/03/69a67e9239cd1.webp";
+const IMG_HEADS = "/head.webp"; 
+const IMG_TAILS = "/tail.webp";
 
 const SingleCoin = forwardRef(({ onStopComplete, index }, ref) => {
   const coinDivRef = useRef(null);
