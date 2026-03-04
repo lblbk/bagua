@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 基础全局设置 */
+body {
+  @apply transition-colors duration-500;
+}
+
 /* 自定义 3D 舞台与动画样式 */
 .coin-scene {
   perspective: 800px;
@@ -22,9 +27,19 @@
   height: 100%;
   border-radius: 50%;
   backface-visibility: hidden;
-  /* 金色边框和投影增加质感 */
+  /* 移除原来的 background-color: #fff; */
+  
+  /* 添加一个优雅的金属光泽渐变（这比纯白底更高级） */
+  background: radial-gradient(circle at 30% 30%, #ffffff, #d1d5db);
+  
+  /* 保持你的阴影和边框 */
   box-shadow: inset 0 0 0 2px rgba(218, 165, 32, 0.6), 0 4px 8px rgba(0,0,0,0.3);
-  background-color: #fff;
+}
+
+/* 在 dark 模式下让背景变成深金属色 */
+.dark .coin-face {
+  background: radial-gradient(circle at 30% 30%, #475569, #1e293b);
+  box-shadow: inset 0 0 0 2px rgba(184, 134, 11, 0.8), 0 4px 12px rgba(0,0,0,0.6);
 }
 
 .coin-face img {
@@ -52,4 +67,9 @@
 
 .history-item-new {
   animation: slideDown 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* 暗色模式下历史记录新条目的边框微调 */
+.dark .history-item-new {
+  @apply bg-indigo-900/30 border-indigo-700;
 }

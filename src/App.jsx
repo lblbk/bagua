@@ -12,6 +12,7 @@ import ControlPanel from './components/ControlPanel';
 import HistoryList from './components/HistoryList';
 import GuaResultStage from './components/GuaResultStage';
 import GuaDetailStage from './components/GuaDetailStage';
+import GuaAIStage from './components/GuaAIStage';
 
 function App() {
   const [selectedMode, setSelectedMode] = useState('full');
@@ -21,6 +22,7 @@ function App() {
   const [history, setHistory] = useState([]);
   const [finalGuaInfo, setFinalGuaInfo] = useState(null);
   const [hexagramDetails, setHexagramDetails] = useState([]);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   
   const coinRefs = useRef([React.createRef(), React.createRef(), React.createRef()]);
   const activeRoundId = useRef(0);
@@ -30,6 +32,17 @@ function App() {
   const timerRef = useRef(null);
 
   // --- 事件处理 ---
+  const toggleDarkMode = () => {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    if (newMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
 
   const toggleYangSetting = () => {
     if (status !== 'idle' && status !== 'finished') return;
@@ -145,12 +158,21 @@ function App() {
   };
 
   useEffect(() => {
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, []);
-
-  useEffect(() => {
+    // 1. 初始化数据：解析 Markdown (高性能任务)
     const parsedData = parseHexagramMarkdown(hexagramsMd);
     setHexagramDetails(parsedData);
+
+    // 2. 初始化主题：读取本地存储
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      setIsDarkMode(true);
+      document.documentElement.classList.add('dark');
+    }
+
+    // 3. 清理工作：组件销毁时确保定时器被清除
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, []);
 
   const currentDetail = finalGuaInfo 
@@ -165,48 +187,52 @@ function App() {
   const isInteracting = status !== 'idle' && status !== 'finished';
 
   return (
-    <div className="w-full max-w-md px-4 flex flex-col items-center gap-6 mx-auto mt-6 relative">
+    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-500">
+      <div className="w-full max-w-md px-4 flex flex-col items-center gap-6 mx-auto mt-6 relative pb-10">
       
-      <Header 
-        yangSetting={yangSetting} 
-        toggleYangSetting={toggleYangSetting} 
-        disabled={isInteracting || isAutoSequence}  
-      />
+        <Header 
+          yangSetting={yangSetting} 
+          toggleYangSetting={toggleYangSetting} 
+          disabled={isInteracting || isAutoSequence} 
+          isDarkMode={isDarkMode} 
+          toggleDarkMode={toggleDarkMode}
+        />
 
-      <ModeTabs 
-        selectedMode={selectedMode} 
-        onSwitchMode={switchMode} 
-        disabled={isInteracting || isAutoSequence} 
-      />
+        <ModeTabs 
+          selectedMode={selectedMode} 
+          onSwitchMode={switchMode} 
+          disabled={isInteracting || isAutoSequence} 
+        />
 
-      <CoinStage 
-        coinRefs={coinRefs.current} 
-        onStopComplete={handleCoinFinish} 
-      />
+        <CoinStage 
+          coinRefs={coinRefs.current} 
+          onStopComplete={handleCoinFinish} 
+        />
 
-      <ControlPanel 
-        status={status}
-        selectedMode={selectedMode}
-        isAutoSequence={isAutoSequence}
-        historyCount={history.length}
-        onMainAction={handleMainAction}
-        onRestart={handleRestart}
-      />
+        <ControlPanel 
+          status={status}
+          selectedMode={selectedMode}
+          isAutoSequence={isAutoSequence}
+          historyCount={history.length}
+          onMainAction={handleMainAction}
+          onRestart={handleRestart}
+        />
 
-      <HistoryList 
-        history={history} 
-        isAutoSequence={isAutoSequence} 
-      />
+        <HistoryList 
+          history={history} 
+          isAutoSequence={isAutoSequence} 
+        />
 
-      {finalGuaInfo && (
-          <>
-            <GuaResultStage history={history} finalGuaInfo={finalGuaInfo} />
-            <GuaDetailStage detail={currentDetail} zhiDetail={zhiDetail} history={history} />
-          </>
-      )}
+        {finalGuaInfo && (
+            <>
+              <GuaResultStage history={history} finalGuaInfo={finalGuaInfo} />
+              <GuaDetailStage detail={currentDetail} zhiDetail={zhiDetail} history={history} />
+              <GuaAIStage detail={currentDetail} history={history} finalGuaInfo={finalGuaInfo} />
+            </>
+        )}
 
-      <Footer />
-      
+        <Footer />
+      </div>
     </div>
   );
 }
