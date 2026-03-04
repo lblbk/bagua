@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { calculateGua } from './utils/guaLogic'; // 引入静态逻辑
+import hexagramsMd from './data/hexagrams.md?raw'; // Vite 加载 raw 文本
+import { parseHexagramMarkdown } from './utils/ParserMarkdown';
+import { calculateYao, calculateFinalHexagram } from './utils/divination'; 
 
 // 引入拆分后的组件
 import Header from './components/Header';
@@ -7,16 +9,18 @@ import ModeTabs from './components/ModeTabs';
 import CoinStage from './components/CoinStage';
 import ControlPanel from './components/ControlPanel';
 import HistoryList from './components/HistoryList';
+import GuaResultStage from './components/GuaResultStage';
+import GuaDetailStage from './components/GuaDetailStage';
 
 function App() {
-  // --- 状态管理 ---
-  const [selectedMode, setSelectedMode] = useState('manual');
+  const [selectedMode, setSelectedMode] = useState('full');
   const [status, setStatus] = useState('idle');
   const [isAutoSequence, setIsAutoSequence] = useState(false);
   const [yangSetting, setYangSetting] = useState('heads');
   const [history, setHistory] = useState([]);
+  const [finalGuaInfo, setFinalGuaInfo] = useState(null);
+  const [hexagramDetails, setHexagramDetails] = useState([]);
   
-  // --- Refs ---
   const coinRefs = useRef([React.createRef(), React.createRef(), React.createRef()]);
   const activeRoundId = useRef(0);
   const currentRoundResults = useRef([null, null, null]); 
@@ -82,19 +86,17 @@ function App() {
 
   const processRoundEnd = () => {
     const rawResults = currentRoundResults.current;
-    const resultString = rawResults.join(' ');
     
-    // 使用提取出的工具函数计算卦象
-    const guaInfo = calculateGua(rawResults, yangSetting);
+    // 1. 调用工具函数计算每一爻
+    const yaoInfo = calculateYao(rawResults, yangSetting);
 
     const newRecord = { 
       id: roundCounter.current, 
-      result: resultString,
-      guaName: guaInfo.name,
-      // 核心修改：存入 type (yin/yang) 和 mark (x/o)，不再依赖 symbol 字符
-      guaType: guaInfo.type, 
-      guaMark: guaInfo.mark, 
-      guaColor: guaInfo.color
+      result: rawResults.join(' '),
+      guaName: yaoInfo.name,
+      guaType: yaoInfo.type, 
+      guaMark: yaoInfo.mark, 
+      guaColor: yaoInfo.color
     };
     
     roundCounter.current += 1;
@@ -105,12 +107,15 @@ function App() {
       if (newHistory.length >= 6) {
         setStatus('finished');
         setIsAutoSequence(false); 
+        
+        // 2. 调用工具函数计算最终卦象
+        const finalInfo = calculateFinalHexagram(newHistory);
+        setFinalGuaInfo(finalInfo);
+
       } else {
         setStatus('idle');
         if (selectedMode === 'full' && isAutoSequence) {
-          timerRef.current = setTimeout(() => {
-            startRound();
-          }, 2000); 
+          timerRef.current = setTimeout(() => startRound(), 2000); 
         }
       }
       return newHistory;
@@ -130,6 +135,7 @@ function App() {
 
   const handleRestart = () => {
     setHistory([]);
+    setFinalGuaInfo(null); // 重置最终卦象信息
     roundCounter.current = 1;
     setStatus('idle');
     setIsAutoSequence(false);
@@ -141,6 +147,15 @@ function App() {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, []);
 
+  useEffect(() => {
+    const parsedData = parseHexagramMarkdown(hexagramsMd);
+    setHexagramDetails(parsedData);
+  }, []);
+
+  const currentDetail = finalGuaInfo 
+    ? hexagramDetails.find(d => d.title.includes(finalGuaInfo.benGua.name))
+    : null;
+
   // --- 渲染 ---
   const isInteracting = status !== 'idle' && status !== 'finished';
 
@@ -150,7 +165,7 @@ function App() {
       <Header 
         yangSetting={yangSetting} 
         toggleYangSetting={toggleYangSetting} 
-        disabled={isInteracting} 
+        disabled={isInteracting || isAutoSequence}  
       />
 
       <ModeTabs 
@@ -177,6 +192,13 @@ function App() {
         history={history} 
         isAutoSequence={isAutoSequence} 
       />
+
+      {finalGuaInfo && (
+          <>
+            <GuaResultStage history={history} finalGuaInfo={finalGuaInfo} />
+            <GuaDetailStage detail={currentDetail} />
+          </>
+      )}
       
     </div>
   );
