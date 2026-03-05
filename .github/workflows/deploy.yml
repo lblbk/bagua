@@ -3,16 +3,25 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]  # 或你使用的主分支，如 master
+    branches: [ main ]
+
+# 设置 GITHUB_TOKEN 的权限，以允许部署到 GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 允许一个并发部署
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
   deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,7 +29,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'  # 根据你的项目需求调整版本
+          node-version: '22'
           cache: 'npm'
 
       - name: Get Short SHA
@@ -31,6 +40,10 @@ jobs:
         run: npm ci
 
       - name: Build project
+        env:
+          VITE_COMMIT_SHA: ${{ env.VITE_COMMIT_SHA }}
+          VITE_VOLCENGINE_API_KEY: ${{ secrets.VITE_VOLCENGINE_API_KEY }}
+          VITE_DASHSCOPE_API_KEY: ${{ secrets.VITE_DASHSCOPE_API_KEY }}
         run: npm run build
 
       - name: Setup Pages
@@ -39,7 +52,9 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
+          # Vite 默认构建输出目录是 dist
           path: ./dist
 
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4

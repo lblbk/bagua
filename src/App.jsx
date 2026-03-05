@@ -6,6 +6,7 @@ import { calculateYao, calculateFinalHexagram } from './utils/divination';
 // 引入拆分后的组件
 import Header from './components/Header';
 import Footer from './components/Footer';
+import QuestionStage from './components/QuestionStage';
 import ModeTabs from './components/ModeTabs';
 import CoinStage from './components/CoinStage';
 import ControlPanel from './components/ControlPanel';
@@ -15,6 +16,8 @@ import GuaDetailStage from './components/GuaDetailStage';
 import GuaAIStage from './components/GuaAIStage';
 
 function App() {
+  const [isQuestionLocked, setIsQuestionLocked] = useState(false);
+  const [question, setQuestion] = useState('');
   const [selectedMode, setSelectedMode] = useState('full');
   const [status, setStatus] = useState('idle');
   const [isAutoSequence, setIsAutoSequence] = useState(false);
@@ -32,6 +35,13 @@ function App() {
   const timerRef = useRef(null);
 
   // --- 事件处理 ---
+
+   // 问题阶段，展开下方区域
+  const handleQuestionSubmit = (q) => {
+    setQuestion(q);
+    setIsQuestionLocked(true);
+  };
+
   const toggleDarkMode = () => {
     const newMode = !isDarkMode;
     setIsDarkMode(newMode);
@@ -198,37 +208,46 @@ function App() {
           toggleDarkMode={toggleDarkMode}
         />
 
-        <ModeTabs 
-          selectedMode={selectedMode} 
-          onSwitchMode={switchMode} 
-          disabled={isInteracting || isAutoSequence} 
+        <QuestionStage 
+          onQuestionSubmit={handleQuestionSubmit} 
+          isLocked={isQuestionLocked} 
         />
 
-        <CoinStage 
-          coinRefs={coinRefs.current} 
-          onStopComplete={handleCoinFinish} 
-        />
+        {isQuestionLocked && (
+          <div className="w-full flex flex-col gap-6 animate-fadeIn">
+            <ModeTabs 
+              selectedMode={selectedMode} 
+              onSwitchMode={switchMode} 
+              disabled={isInteracting || isAutoSequence} 
+            />
 
-        <ControlPanel 
-          status={status}
-          selectedMode={selectedMode}
-          isAutoSequence={isAutoSequence}
-          historyCount={history.length}
-          onMainAction={handleMainAction}
-          onRestart={handleRestart}
-        />
+            <CoinStage 
+              coinRefs={coinRefs.current} 
+              onStopComplete={handleCoinFinish} 
+            />
 
-        <HistoryList 
-          history={history} 
-          isAutoSequence={isAutoSequence} 
-        />
+            <ControlPanel 
+              status={status}
+              selectedMode={selectedMode}
+              isAutoSequence={isAutoSequence}
+              historyCount={history.length}
+              onMainAction={handleMainAction}
+              onRestart={handleRestart}
+            />
 
-        {finalGuaInfo && (
-            <>
-              <GuaResultStage history={history} finalGuaInfo={finalGuaInfo} />
-              <GuaDetailStage detail={currentDetail} zhiDetail={zhiDetail} history={history} />
-              <GuaAIStage detail={currentDetail} history={history} finalGuaInfo={finalGuaInfo} />
-            </>
+            <HistoryList 
+              history={history} 
+              isAutoSequence={isAutoSequence} 
+            />
+
+            {finalGuaInfo && (
+                <>
+                  <GuaResultStage history={history} finalGuaInfo={finalGuaInfo} />
+                  <GuaDetailStage detail={currentDetail} zhiDetail={zhiDetail} history={history} />
+                  <GuaAIStage detail={currentDetail} zhiDetail={zhiDetail} history={history} finalGuaInfo={finalGuaInfo} question={question} />
+                </>
+            )}
+          </div>
         )}
 
         <Footer />

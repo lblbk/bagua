@@ -42,7 +42,7 @@ const GuaDetailStage = ({ detail, zhiDetail, history }) => {
             <button 
               className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${activeGua === 'zhi' ? 'bg-white dark:bg-slate-700 shadow text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`}
               onClick={() => setActiveGua('zhi')}
-            >变卦</button>
+            >之卦</button>
           </div>
         )}
 
