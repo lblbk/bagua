@@ -7,7 +7,7 @@ body {
   @apply transition-colors duration-500;
 }
 
-/* 自定义 3D 舞台与动画样式 */
+/* 1. 基础舞台 */
 .coin-scene {
   perspective: 800px;
   width: 90px;
@@ -21,6 +21,7 @@ body {
   transform-style: preserve-3d;
 }
 
+/* 2. 钱币表面：全透明，不加任何背景和边框 */
 .coin-face {
   position: absolute;
   width: 100%;
@@ -30,26 +31,33 @@ body {
   align-items: center;
   justify-content: center;
   
-  /* --- 核心修改：去掉光环和背景 --- */
-  background: transparent; /* 去掉原本的白色或灰色背景 */
-  border: none;             /* 去掉金属边框 */
-  box-shadow: none;         /* 去掉内外阴影 */
-  border-radius: 50%;       /* 保持圆形容器 */
-  overflow: hidden;         /* 确保图片不超出 */
+  background: transparent !important; /* 强制透明，防止被其他样式覆盖 */
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 50%;
 }
 
-/* 在 dark 模式下让背景变成深金属色 */
-.dark .coin-face {
-  background: radial-gradient(circle at 30% 30%, #475569, #1e293b);
-  box-shadow: inset 0 0 0 2px rgba(184, 134, 11, 0.8), 0 4px 12px rgba(0,0,0,0.6);
-}
+/* 3. 彻底删除之前的 .dark .coin-face 代码块 */
+/* 不要保留任何 .dark .coin-face 的背景或边框设置 */
 
+/* 4. 图像处理 */
 .coin-face img {
   width: 100%;
   height: 100%;
-  object-fit: contain;      /* 保持 SVG 比例并自适应 */
+  /* 如果 SVG 边缘有白边，尝试使用 cover 撑满容器，或者保持 contain */
+  object-fit: contain; 
   display: block;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  /* 去掉阴影，防止暗色模式下边缘模糊产生“光圈”感 */
+  filter: none; 
+}
+
+/* 5. 解决暗色模式下可能的“白边”渲染问题 */
+.dark .coin-face img {
+  /* 如果 SVG 边缘依然有细微白边，可以尝试轻微缩小（可选） */
+  /* transform: scale(1.01); */
+  
+  /* 或者增加一个极小的对比度滤镜来压制边缘杂色 */
+  filter: brightness(0.95); 
 }
 
 .coin-front {
