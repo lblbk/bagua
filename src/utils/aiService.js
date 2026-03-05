@@ -23,26 +23,38 @@ export const generateDivinationPrompt = ({ question, finalGuaInfo, benDetail, zh
   return `
 # 易经六爻解卦请求
 
-## 1. 所求为何
+## 占卜上下文
+
+1. 所求为何
 ${question || "未明确具体问题，请进行综合运势分析"}
 
-## 2. 卦象基本信息
+2. 卦象基本信息
 - 【本卦】：${finalGuaInfo.benGua.commonName} (${finalGuaInfo.benGua.name})
   - 卦辞：${benDetail?.guaCi || "无"}
   - 象曰：${benDetail?.xiangYue || "无"}
 - 【之卦】：${finalGuaInfo.zhiGua ? `${finalGuaInfo.zhiGua.commonName} (${finalGuaInfo.zhiGua.name})` : "无变卦 (静卦)"}
   ${finalGuaInfo.zhiGua ? `- 之卦卦辞：${zhiDetail?.guaCi || "无"}` : ""}
 
-## 3. 爻位变动分析
+3. 爻位变动分析
 ${movingLines.length > 0 ? movingLinesDetail : "此卦为静卦，无变爻，请重点分析本卦卦辞与象曰。"}
 
 ## 要求 (严格执行)
-1. **禁止**废话、**禁止**客套、**禁止**重复问题。
-2. 总字数控制在 **200字以内**。
-3. 必须使用 Markdown 格式，结构如下：
-   - 核心卦意 (一句话)
-   - 吉凶判断 (简短结论)
-   - 关键建议 (2-3个要点)
+1. **语言风格**：直白易懂，拒绝玄学堆砌，像老友对话一样给予建议。
+2. **结构化输出**：必须严格按照以下 Markdown 格式，且标题后必须带中文冒号“：”。
+3. **字数限制**：总字数严控在 200-250 字之间，言简意赅。
+
+## 3. 回复模板 (请按此结构回复)
+
+**卦意：**
+(此处请用一段话直接阐述该卦对用户问题的核心启示)
+
+**吉凶：**
+(此处给出明确的趋势结论，指出是顺风顺水、还是需守成待机)
+
+**箴言：**
+- 第一条建议 (针对现状的直接动作)
+- 第二条建议 (心态或防范点)
+- 第三条建议 (未来的观察点)
   `.trim();
 };
 

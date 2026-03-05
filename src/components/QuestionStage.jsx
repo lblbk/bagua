@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+// QuestionStage.jsx
+import React from 'react';
 
-const QuestionStage = ({ onQuestionSubmit, isLocked }) => {
-  const [question, setQuestion] = useState('');
-
-  // 快捷输入选项
+const QuestionStage = ({ question, setQuestion, onQuestionSubmit, isLocked, onRestart }) => {
   const quickSuggestions = ["今日运势", "今日财运", "事业发展", "感情缘分", "健康平安"];
 
   const handleSubmit = () => {
@@ -15,7 +13,7 @@ const QuestionStage = ({ onQuestionSubmit, isLocked }) => {
   return (
     <div className="w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-2xl shadow-lg border border-white/50 dark:border-slate-800 p-6 transition-all duration-500 overflow-hidden">
       
-      {/* 标题部分 */}
+      {/* 1. 标题部分：去掉了右上角的小按钮 */}
       <div className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-800 pb-2">
         <h3 className="text-gray-400 dark:text-slate-500 font-bold text-xs uppercase tracking-widest">
           占卜为何
@@ -23,18 +21,27 @@ const QuestionStage = ({ onQuestionSubmit, isLocked }) => {
       </div>
       
       {isLocked ? (
-        /* 锁定后的状态 */
-        <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl animate-slideUp border border-indigo-100 dark:border-indigo-900/30">
-          <span className="text-gray-400 dark:text-slate-500 text-[10px] block mb-1 uppercase tracking-tighter">所问之事：</span>
-          <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
-            {question}
-          </p>
+        /* 2. 锁定状态：问题展示 + 大重置按钮 */
+        <div className="flex flex-col gap-4 animate-slideUp">
+          {/* 问题展示盒 */}
+          <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
+            <span className="text-gray-400 dark:text-slate-500 text-[10px] block mb-1 uppercase tracking-tighter">所问之事：</span>
+            <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+              {question}
+            </p>
+          </div>
+
+          {/* 核心修改：大号“再起一卦”按钮 */}
+          <button 
+            onClick={onRestart}
+            className="w-full py-2.5 flex items-center justify-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/10 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 border border-indigo-200/50 dark:border-indigo-800/50 rounded-xl transition-all active:scale-95"
+          >
+            <span className="text-lg">↺</span> 再起一卦
+          </button>
         </div>
       ) : (
-        /* 初始输入状态 */
+        /* 3. 初始输入状态 (保持不变) */
         <div className="flex flex-col gap-6 animate-fadeIn">
-          
-          {/* 快捷输入按钮 */}
           <div className="flex flex-wrap gap-2">
             {quickSuggestions.map(item => (
               <button
@@ -47,7 +54,6 @@ const QuestionStage = ({ onQuestionSubmit, isLocked }) => {
             ))}
           </div>
 
-          {/* 文本输入框 */}
           <textarea 
             className="w-full h-28 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-400 dark:focus:border-indigo-500 transition-all resize-none text-sm placeholder:text-slate-300 dark:placeholder:text-slate-600 shadow-inner"
             placeholder="心中默念所问之事，在此输入..."
@@ -55,7 +61,6 @@ const QuestionStage = ({ onQuestionSubmit, isLocked }) => {
             onChange={(e) => setQuestion(e.target.value)}
           />
 
-          {/* 提交按钮 */}
           <button 
             onClick={handleSubmit}
             disabled={question.trim().length === 0}
@@ -92,7 +97,6 @@ const QuestionStage = ({ onQuestionSubmit, isLocked }) => {
               ))}
             </div>
           </div>
-          
         </div>
       )}
     </div>

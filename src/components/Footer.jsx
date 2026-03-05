@@ -14,6 +14,10 @@ const Footer = () => {
         <p className="text-[10px] uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">
           易经 · 六爻占卜
         </p>
+
+        <p className="text-[10px] text-gray-400 dark:text-gray-500">
+          仅供娱乐，切莫当真
+        </p>
         
         {/* 版权信息 */}
         <p className="text-[10px] text-gray-400 dark:text-gray-500">

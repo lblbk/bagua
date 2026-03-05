@@ -1,21 +1,20 @@
-import React, { useState, useRef, useEffect } from 'react';
-import hexagramsMd from './data/hexagrams.md?raw'; // Vite 加载 raw 文本
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import hexagramsMd from './data/hexagrams.md?raw';
 import { parseHexagramMarkdown } from './utils/ParserMarkdown';
-import { calculateYao, calculateFinalHexagram } from './utils/divination'; 
+import { calculateYao, calculateFinalHexagram } from './utils/divination';
 
-// 引入拆分后的组件
 import Header from './components/Header';
 import Footer from './components/Footer';
 import QuestionStage from './components/QuestionStage';
-import ModeTabs from './components/ModeTabs';
-import CoinStage from './components/CoinStage';
-import ControlPanel from './components/ControlPanel';
+import DivinationStage from './components/DivinationStage';
 import HistoryList from './components/HistoryList';
 import GuaResultStage from './components/GuaResultStage';
 import GuaDetailStage from './components/GuaDetailStage';
 import GuaAIStage from './components/GuaAIStage';
+import ConfirmModal from './components/ConfirmModal';
 
 function App() {
+  const [showConfirm, setShowConfirm] = useState(false);
   const [isQuestionLocked, setIsQuestionLocked] = useState(false);
   const [question, setQuestion] = useState('');
   const [selectedMode, setSelectedMode] = useState('full');
@@ -26,230 +25,132 @@ function App() {
   const [finalGuaInfo, setFinalGuaInfo] = useState(null);
   const [hexagramDetails, setHexagramDetails] = useState([]);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  
+
   const coinRefs = useRef([React.createRef(), React.createRef(), React.createRef()]);
   const activeRoundId = useRef(0);
-  const currentRoundResults = useRef([null, null, null]); 
+  const currentRoundResults = useRef([null, null, null]);
   const completedCount = useRef(0);
   const roundCounter = useRef(1);
   const timerRef = useRef(null);
 
-  // --- 事件处理 ---
+  useEffect(() => {
+    setHexagramDetails(parseHexagramMarkdown(hexagramsMd));
+    const isDark = localStorage.getItem('theme') === 'dark';
+    setIsDarkMode(isDark);
+    document.documentElement.classList.toggle('dark', isDark);
+    return () => clearTimeout(timerRef.current);
+  }, []);
 
-   // 问题阶段，展开下方区域
-  const handleQuestionSubmit = (q) => {
-    setQuestion(q);
-    setIsQuestionLocked(true);
-  };
+  const { currentDetail, zhiDetail } = useMemo(() => {
+    if (!finalGuaInfo) return { currentDetail: null, zhiDetail: null };
+    const findD = (name) => hexagramDetails.find(d => d.title.includes(name));
+    return { currentDetail: findD(finalGuaInfo.benGua.name), zhiDetail: finalGuaInfo.zhiGua ? findD(finalGuaInfo.zhiGua.name) : null };
+  }, [finalGuaInfo, hexagramDetails]);
 
   const toggleDarkMode = () => {
-    const newMode = !isDarkMode;
-    setIsDarkMode(newMode);
-    if (newMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
+    const next = !isDarkMode;
+    setIsDarkMode(next);
+    localStorage.setItem('theme', next ? 'dark' : 'light');
+    document.documentElement.classList.toggle('dark', next);
   };
 
-  const toggleYangSetting = () => {
-    if (status !== 'idle' && status !== 'finished') return;
-    setYangSetting(prev => prev === 'heads' ? 'tails' : 'heads');
-  };
-
-  const switchMode = (mode) => {
-    if (isAutoSequence || status === 'spinning' || status === 'stopping') return; 
-    setSelectedMode(mode);
-    handleRestart();
+  const executeRestart = (clearAll = true) => {
+    setHistory([]);
+    setFinalGuaInfo(null);
+    roundCounter.current = 1;
+    setStatus('idle');
+    setIsAutoSequence(false);
+    clearTimeout(timerRef.current);
+    if (clearAll) { setQuestion(''); setIsQuestionLocked(false); setShowConfirm(false); }
   };
 
   const startRound = () => {
     if (history.length >= 6) return;
-
     setStatus('spinning');
-    currentRoundResults.current = [null, null, null];
     completedCount.current = 0;
-
-    const newRoundId = Date.now();
-    activeRoundId.current = newRoundId;
-
-    coinRefs.current.forEach(ref => ref.current?.startSpin(newRoundId));
-
-    // 根据模式设置定时器
-    let duration = 0;
-    if (selectedMode === 'manual') duration = 8000;
-    else if (selectedMode === 'semi') duration = 2000 + Math.random() * 1000;
-    else if (selectedMode === 'full') duration = 1200;
-
-    // 手动模式超时停止，其他模式自动停止
-    const shouldStopAutomatically = selectedMode !== 'manual';
-    
-    timerRef.current = setTimeout(() => {
-        stopRound(shouldStopAutomatically); // manual 模式下这个是超时保护
-    }, duration);
+    activeRoundId.current = Date.now();
+    coinRefs.current.forEach(ref => ref.current?.startSpin(activeRoundId.current));
+    const d = { manual: 8000, semi: 2000 + Math.random() * 1000, full: 1200 };
+    timerRef.current = setTimeout(() => stopRound(selectedMode !== 'manual'), d[selectedMode]);
   };
 
-  const stopRound = (isQuick = false) => {
-    if (timerRef.current) clearTimeout(timerRef.current);
+  const stopRound = (quick = false) => {
+    clearTimeout(timerRef.current);
     setStatus('stopping');
-    coinRefs.current.forEach(ref => ref.current?.stopSpin(isQuick));
-  };
-
-  const handleCoinFinish = (index, result, roundId) => {
-    if (roundId !== activeRoundId.current) return;
-
-    currentRoundResults.current[index] = result;
-    completedCount.current += 1;
-
-    if (completedCount.current === 3) {
-      processRoundEnd();
-    }
+    coinRefs.current.forEach(ref => ref.current?.stopSpin(quick));
   };
 
   const processRoundEnd = () => {
-    const rawResults = currentRoundResults.current;
-    
-    // 1. 调用工具函数计算每一爻
-    const yaoInfo = calculateYao(rawResults, yangSetting);
-
+    const info = calculateYao(currentRoundResults.current, yangSetting);
+    // 关键修复：显式映射属性名，确保与 HistoryList 等组件兼容
     const newRecord = { 
-      id: roundCounter.current, 
-      result: rawResults.join(' '),
-      guaName: yaoInfo.name,
-      guaType: yaoInfo.type, 
-      guaMark: yaoInfo.mark, 
-      guaColor: yaoInfo.color
+      id: roundCounter.current++, 
+      result: currentRoundResults.current.join(' '), 
+      guaName: info.name, 
+      guaType: info.type, 
+      guaMark: info.mark, 
+      guaColor: info.color 
     };
-    
-    roundCounter.current += 1;
 
     setHistory(prev => {
-      const newHistory = [newRecord, ...prev]; 
-      
-      if (newHistory.length >= 6) {
+      const next = [newRecord, ...prev];
+      if (next.length >= 6) {
         setStatus('finished');
-        setIsAutoSequence(false); 
-        
-        // 2. 调用工具函数计算最终卦象
-        const finalInfo = calculateFinalHexagram(newHistory);
-        setFinalGuaInfo(finalInfo);
-
+        setIsAutoSequence(false);
+        setFinalGuaInfo(calculateFinalHexagram(next));
       } else {
         setStatus('idle');
-        if (selectedMode === 'full' && isAutoSequence) {
-          timerRef.current = setTimeout(() => startRound(), 2000); 
-        }
+        if (selectedMode === 'full' && isAutoSequence) timerRef.current = setTimeout(startRound, 2000);
       }
-      return newHistory;
+      return next;
     });
   };
 
-  const handleMainAction = () => {
-    if (isAutoSequence && status !== 'finished') return;
-
-    if (status === 'idle') {
-      if (selectedMode === 'full') setIsAutoSequence(true); 
-      startRound();
-    } else if (status === 'spinning' && selectedMode === 'manual') {
-      stopRound();
-    }
+  const handleCoinFinish = (idx, res, rid) => {
+    if (rid !== activeRoundId.current) return;
+    currentRoundResults.current[idx] = res;
+    if (++completedCount.current === 3) processRoundEnd();
   };
-
-  const handleRestart = () => {
-    setHistory([]);
-    setFinalGuaInfo(null); // 重置最终卦象信息
-    roundCounter.current = 1;
-    setStatus('idle');
-    setIsAutoSequence(false);
-    activeRoundId.current = 0; 
-    if (timerRef.current) clearTimeout(timerRef.current);
-  };
-
-  useEffect(() => {
-    // 1. 初始化数据：解析 Markdown (高性能任务)
-    const parsedData = parseHexagramMarkdown(hexagramsMd);
-    setHexagramDetails(parsedData);
-
-    // 2. 初始化主题：读取本地存储
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-      setIsDarkMode(true);
-      document.documentElement.classList.add('dark');
-    }
-
-    // 3. 清理工作：组件销毁时确保定时器被清除
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  const currentDetail = finalGuaInfo 
-    ? hexagramDetails.find(d => d.title.includes(finalGuaInfo.benGua.name))
-    : null;
-
-  const zhiDetail = finalGuaInfo?.zhiGua
-    ? hexagramDetails.find(d => d.title.includes(finalGuaInfo.zhiGua.name))
-    : null;
-
-  // --- 渲染 ---
-  const isInteracting = status !== 'idle' && status !== 'finished';
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-500">
-      <div className="w-full max-w-md px-4 flex flex-col items-center gap-6 mx-auto mt-6 relative pb-10">
-      
+    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-500 pb-10">
+      <div className="w-full max-w-md px-4 flex flex-col items-center gap-6 mx-auto mt-6 relative">
         <Header 
           yangSetting={yangSetting} 
-          toggleYangSetting={toggleYangSetting} 
-          disabled={isInteracting || isAutoSequence} 
-          isDarkMode={isDarkMode} 
-          toggleDarkMode={toggleDarkMode}
+          toggleYangSetting={() => (status === 'idle' || status === 'finished') && setYangSetting(s => s === 'heads' ? 'tails' : 'heads')} 
+          disabled={status !== 'idle' || isAutoSequence || history.length > 0} 
+          isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode}
         />
 
         <QuestionStage 
-          onQuestionSubmit={handleQuestionSubmit} 
-          isLocked={isQuestionLocked} 
+          question={question} setQuestion={setQuestion} isLocked={isQuestionLocked}
+          onQuestionSubmit={(q) => { setQuestion(q); setIsQuestionLocked(true); }} 
+          onRestart={() => isQuestionLocked ? setShowConfirm(true) : executeRestart(true)}
         />
+
+        <ConfirmModal isOpen={showConfirm} onClose={() => setShowConfirm(false)} onConfirm={() => executeRestart(true)} />
 
         {isQuestionLocked && (
           <div className="w-full flex flex-col gap-6 animate-fadeIn">
-            <ModeTabs 
-              selectedMode={selectedMode} 
-              onSwitchMode={switchMode} 
-              disabled={isInteracting || isAutoSequence} 
+            <DivinationStage 
+              status={status} selectedMode={selectedMode} isAutoSequence={isAutoSequence} historyCount={history.length}
+              coinRefs={coinRefs.current} onSwitchMode={(m) => { setSelectedMode(m); executeRestart(false); }}
+              onMainAction={() => {
+                if (status === 'idle') { if (selectedMode === 'full') setIsAutoSequence(true); startRound(); }
+                else if (status === 'spinning' && selectedMode === 'manual') stopRound();
+              }}
+              onStopComplete={handleCoinFinish}
             />
-
-            <CoinStage 
-              coinRefs={coinRefs.current} 
-              onStopComplete={handleCoinFinish} 
-            />
-
-            <ControlPanel 
-              status={status}
-              selectedMode={selectedMode}
-              isAutoSequence={isAutoSequence}
-              historyCount={history.length}
-              onMainAction={handleMainAction}
-              onRestart={handleRestart}
-            />
-
-            <HistoryList 
-              history={history} 
-              isAutoSequence={isAutoSequence} 
-            />
-
+            <HistoryList history={history} isAutoSequence={isAutoSequence} />
             {finalGuaInfo && (
-                <>
-                  <GuaResultStage history={history} finalGuaInfo={finalGuaInfo} />
-                  <GuaDetailStage detail={currentDetail} zhiDetail={zhiDetail} history={history} />
-                  <GuaAIStage detail={currentDetail} zhiDetail={zhiDetail} history={history} finalGuaInfo={finalGuaInfo} question={question} />
-                </>
+              <>
+                <GuaResultStage history={history} finalGuaInfo={finalGuaInfo} />
+                <GuaDetailStage detail={currentDetail} zhiDetail={zhiDetail} history={history} />
+                <GuaAIStage detail={currentDetail} zhiDetail={zhiDetail} history={history} finalGuaInfo={finalGuaInfo} question={question} />
+              </>
             )}
           </div>
         )}
-
         <Footer />
       </div>
     </div>
