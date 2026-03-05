@@ -1,7 +1,7 @@
 import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 
-const IMG_HEADS = `${import.meta.env.BASE_URL}head.webp`;
-const IMG_TAILS = `${import.meta.env.BASE_URL}tail.webp`;
+const IMG_HEADS = `${import.meta.env.BASE_URL}head.svg`;
+const IMG_TAILS = `${import.meta.env.BASE_URL}tail.svg`;
 
 const SingleCoin = forwardRef(({ onStopComplete, index }, ref) => {
   const coinDivRef = useRef(null);

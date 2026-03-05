@@ -25,15 +25,17 @@ body {
   position: absolute;
   width: 100%;
   height: 100%;
-  border-radius: 50%;
   backface-visibility: hidden;
-  /* 移除原来的 background-color: #fff; */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   
-  /* 添加一个优雅的金属光泽渐变（这比纯白底更高级） */
-  background: radial-gradient(circle at 30% 30%, #ffffff, #d1d5db);
-  
-  /* 保持你的阴影和边框 */
-  box-shadow: inset 0 0 0 2px rgba(218, 165, 32, 0.6), 0 4px 8px rgba(0,0,0,0.3);
+  /* --- 核心修改：去掉光环和背景 --- */
+  background: transparent; /* 去掉原本的白色或灰色背景 */
+  border: none;             /* 去掉金属边框 */
+  box-shadow: none;         /* 去掉内外阴影 */
+  border-radius: 50%;       /* 保持圆形容器 */
+  overflow: hidden;         /* 确保图片不超出 */
 }
 
 /* 在 dark 模式下让背景变成深金属色 */
@@ -45,8 +47,9 @@ body {
 .coin-face img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
+  object-fit: contain;      /* 保持 SVG 比例并自适应 */
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
 }
 
 .coin-front {
