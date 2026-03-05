@@ -8,6 +8,7 @@ export async function onRequestPost(context) {
     // 2. 从 Cloudflare 环境变量中安全获取 API Key
     // 注意：这里不要明文写 Key，我们在 Cloudflare 后台配置
     const apiKey = context.env.VOLCENGINE_API_KEY; 
+    console.log(`Debug Key: Prefix=${apiKey?.substring(0, 8)}, Length=${apiKey?.length}`);
 
     // 3. 由云函数向火山引擎发起真实请求 (服务器到服务器，没有跨域限制！)
     const response = await fetch(`${baseUrl}/chat/completions`, {
