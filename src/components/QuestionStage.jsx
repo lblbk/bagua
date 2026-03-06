@@ -16,7 +16,7 @@ const QuestionStage = ({ question, setQuestion, onQuestionSubmit, isLocked, onRe
       {/* 1. 标题部分：去掉了右上角的小按钮 */}
       <div className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-800 pb-2">
         <h3 className="text-gray-400 dark:text-slate-500 font-bold text-xs uppercase tracking-widest">
-          占卜为何
+          何为
         </h3>
       </div>
       

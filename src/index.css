@@ -109,3 +109,11 @@ body {
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-out forwards;
 }
+
+/* 截图专用保护样式 */
+.is-printing button {
+  transform: none !important; /* 强制取消缩放 */
+  transition: none !important; /* 取消过渡动画 */
+  box-shadow: none !important; /* 取消投影，防止边缘模糊 */
+  background-color: transparent !important; /* 保持底色纯净 */
+}

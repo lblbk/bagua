@@ -23,7 +23,7 @@ const GuaDetailStage = ({ detail, zhiDetail, history }) => {
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <h3 className="text-gray-400 dark:text-gray-500 font-bold text-xs uppercase tracking-widest whitespace-nowrap">
-          卦辞详解
+          卦辞
         </h3>
         <span className={`text-gray-300 dark:text-gray-600 text-[10px] transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}>
           ▼

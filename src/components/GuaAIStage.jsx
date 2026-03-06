@@ -91,7 +91,7 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
       >
         <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
         <h3 className="text-gray-400 dark:text-gray-500 font-bold text-xs uppercase tracking-widest flex-1">
-          易数推演
+          推演
         </h3>
         <span className={`text-gray-300 text-[10px] transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
           ▼
@@ -105,15 +105,14 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
               ✨
             </div>
             <p className="text-xs text-slate-400 dark:text-slate-500 mb-6 italic px-6 leading-relaxed">
-              “大衍之数五十，其用四十有九”<br/>
-              天机正在演算，为您窥探卦中玄机...
+              “大衍之数五十，其用四十有九”
             </p>
             <button 
               onClick={handleInterpret} 
               className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all text-sm"
             >
               <span className="relative z-10 flex items-center gap-2 text-base">
-                洞见天机 <span className="group-hover:translate-x-1 transition-transform">→</span>
+                洞见天机
               </span>
               <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500 -skew-x-12 -translate-x-full" />
             </button>

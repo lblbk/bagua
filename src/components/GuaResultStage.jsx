@@ -67,7 +67,7 @@ const GuaResultStage = ({ history, finalGuaInfo }) => {
         className="flex items-center gap-2 mb-2 pb-2 cursor-pointer hover:opacity-70 transition-opacity"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <h3 className="text-gray-400 dark:text-gray-500 font-bold text-xs uppercase tracking-widest">卦象展示</h3>
+        <h3 className="text-gray-400 dark:text-gray-500 font-bold text-xs uppercase tracking-widest">卦象</h3>
         <span className={`text-gray-300 dark:text-gray-600 text-[10px] transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}>▼</span>
       </div>
       

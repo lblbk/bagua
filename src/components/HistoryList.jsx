@@ -27,7 +27,7 @@ const HistoryList = ({ history, isAutoSequence }) => {
       >
         <div className="flex items-center gap-2">
           <h2 className="text-gray-400 dark:text-gray-500 font-bold text-xs uppercase tracking-widest">
-            排盘记录 ({history.length}/6)
+            排盘 ({history.length}/6)
           </h2>
           <span className={`text-gray-300 dark:text-gray-500 text-[10px] transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}>
             ▼

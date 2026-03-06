@@ -1,36 +1,62 @@
+import React from 'react';
+
 const Header = ({ yangSetting, toggleYangSetting, disabled, isDarkMode, toggleDarkMode }) => {
   return (
-    <div className="w-full flex justify-between items-center mb-6 px-1">
-      {/* 标题增加了对 dark mode 的文字颜色适配 */}
-      <h1 className="text-2xl font-bold text-slate-700 dark:text-slate-100 tracking-wider">
-        三币占卜
-      </h1>
+    // 关键修改：将 mb-8 缩小为 mb-2，pb-4 缩小为 pb-1
+    <div className="w-full flex flex-col gap-1 pt-12 pb-1 mb-2 px-1 group relative">
       
-      <div className="flex items-center gap-3">
-        {/* 阴阳设定按钮 */}
-        <button
-          onClick={toggleYangSetting}
-          disabled={disabled}
-          className={`
-            text-xs font-medium px-3 py-1.5 rounded-full border transition-all flex items-center gap-2
-            ${disabled 
-              ? 'opacity-50 cursor-not-allowed border-gray-200 dark:border-slate-700 text-gray-400' 
-              : 'hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 active:scale-95'}
-          `}
-        >
-          <span className={`w-2 h-2 rounded-full ${yangSetting === 'heads' ? 'bg-indigo-400' : 'bg-orange-400'}`}></span>
-          {yangSetting === 'heads' ? '字=阳' : '花=阳'}
-        </button>
-
-        {/* 主题切换按钮：增加了旋转动画 */}
-        <button 
-          onClick={toggleDarkMode}
-          className="p-2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-yellow-300 transition-all duration-500 hover:rotate-180"
-          aria-label="切换主题"
-        >
-          {isDarkMode ? '🌙' : '☀️'}
-        </button>
+      {/* 顶部中央装饰点 */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 opacity-20">
+        <div className="flex gap-1.5">
+          <div className="w-1 h-1 rounded-full bg-slate-400 dark:bg-slate-500"></div>
+          <div className="w-4 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+          <div className="w-1 h-1 rounded-full bg-slate-400 dark:bg-slate-500"></div>
+        </div>
       </div>
+
+      {/* 标题与按钮区域 */}
+      <div className="flex justify-between items-end">
+        <div className="flex flex-col">
+          <span className="text-[10px] uppercase tracking-[0.4em] text-indigo-500 dark:text-indigo-400 font-bold ml-0.5 mb-1 opacity-80">
+            大衍之数 · 一念乾坤
+          </span>
+          <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter flex items-center gap-2">
+            问卦
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.6)]"></span>
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* 阴阳设定 */}
+          <button
+            onClick={toggleYangSetting}
+            disabled={disabled}
+            className={`
+              relative h-9 px-4 rounded-xl border transition-all duration-300 flex items-center gap-2 overflow-hidden
+              ${disabled 
+                ? 'opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900' 
+                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm hover:border-indigo-400 dark:hover:border-indigo-500 active:scale-95'}
+            `}
+          >
+            <div className={`w-2 h-2 rounded-full shadow-sm transition-colors duration-500 ${yangSetting === 'heads' ? 'bg-indigo-500 shadow-indigo-200' : 'bg-orange-500 shadow-orange-200'}`}></div>
+            <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap tracking-wide">
+              {yangSetting === 'heads' ? '字面为阳' : '花面为阳'}
+            </span>
+          </button>
+
+          {/* 暗色模式切换 */}
+          <button 
+            onClick={toggleDarkMode}
+            className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-yellow-400 border border-transparent dark:border-slate-700 transition-all active:scale-90"
+            aria-label="切换主题"
+          >
+            <span className="text-lg">{isDarkMode ? '🌙' : '☀️'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 底部装饰线：mt-3 确保它紧贴标题 */}
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent mt-3 opacity-50"></div>
     </div>
   );
 };

@@ -11,6 +11,7 @@ import HistoryList from './components/HistoryList';
 import GuaResultStage from './components/GuaResultStage';
 import GuaDetailStage from './components/GuaDetailStage';
 import GuaAIStage from './components/GuaAIStage';
+import ToolBox from './components/ToolBox';
 import ConfirmModal from './components/ConfirmModal';
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
   const completedCount = useRef(0);
   const roundCounter = useRef(1);
   const timerRef = useRef(null);
+  const captureRef = useRef(null);
 
   useEffect(() => {
     setHexagramDetails(parseHexagramMarkdown(hexagramsMd));
@@ -114,7 +116,7 @@ function App() {
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-500 pt-6 pb-10">
-      <div className="w-full max-w-md px-4 flex flex-col items-center gap-6 mx-auto relative">
+      <div ref={captureRef} data-capture-area="true" className="w-full max-w-md px-4 flex flex-col items-center gap-6 mx-auto relative">
         <Header 
           yangSetting={yangSetting} 
           toggleYangSetting={() => (status === 'idle' || status === 'finished') && setYangSetting(s => s === 'heads' ? 'tails' : 'heads')} 
@@ -147,6 +149,7 @@ function App() {
                 <GuaResultStage history={history} finalGuaInfo={finalGuaInfo} />
                 <GuaDetailStage detail={currentDetail} zhiDetail={zhiDetail} history={history} />
                 <GuaAIStage detail={currentDetail} zhiDetail={zhiDetail} history={history} finalGuaInfo={finalGuaInfo} question={question} />
+                <ToolBox finalGuaInfo={finalGuaInfo} question={question} targetRef={captureRef} />
               </>
             )}
           </div>
