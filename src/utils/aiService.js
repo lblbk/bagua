@@ -68,8 +68,8 @@ export const fetchAIInterpretation = async (prompt, onChunk, onError) => {
   // 检查当前域名是否属于 Cloudflare (pages.dev 或你的自定义域名)
   const isCloudflare = 
     window.location.hostname.endsWith("pages.dev") || 
-    window.location.hostname.endsWith("lblbk.top") ||
-    window.location.hostname === "localhost"; // 本地开发时建议先用 Cloudflare 逻辑测试，或者根据需要调整
+    window.location.hostname.endsWith("lblbk.top");
+    // window.location.hostname === "localhost"; // 本地开发时建议先用 Cloudflare 逻辑测试，或者根据需要调整
 
   // 1. 根据环境决定请求的 URL
   // Cloudflare 使用相对路径代理，GitHub Pages 使用完整的 API 地址
