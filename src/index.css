@@ -3,8 +3,15 @@
 @tailwind utilities;
 
 /* 基础全局设置 */
+html, body {
+  margin: 0;
+  padding: 0;
+  /* 这一行确保浏览器拉动时不会露出白色 */
+  @apply bg-slate-50 dark:bg-slate-900;
+}
+
 body {
-  @apply transition-colors duration-500;
+  @apply transition-colors duration-500 antialiased;
 }
 
 /* 1. 基础舞台 */

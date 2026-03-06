@@ -113,8 +113,8 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-500 pb-10">
-      <div className="w-full max-w-md px-4 flex flex-col items-center gap-6 mx-auto mt-6 relative">
+    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-500 pt-6 pb-10">
+      <div className="w-full max-w-md px-4 flex flex-col items-center gap-6 mx-auto relative">
         <Header 
           yangSetting={yangSetting} 
           toggleYangSetting={() => (status === 'idle' || status === 'finished') && setYangSetting(s => s === 'heads' ? 'tails' : 'heads')} 
