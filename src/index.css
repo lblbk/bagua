@@ -117,3 +117,11 @@ body {
   box-shadow: none !important; /* 取消投影，防止边缘模糊 */
   background-color: transparent !important; /* 保持底色纯净 */
 }
+
+.is-printing * {
+  transition: none !important;
+  animation: none !important;
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  box-shadow: none !important; /* 如果不需要阴影，可加上这句消除阴影导致的虚边 */
+}
