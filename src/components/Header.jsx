@@ -3,7 +3,7 @@ import React from 'react';
 const Header = ({ yangSetting, toggleYangSetting, disabled, isDarkMode, toggleDarkMode }) => {
   return (
     // 关键修改：将 mb-8 缩小为 mb-2，pb-4 缩小为 pb-1
-    <div className="w-full flex flex-col gap-1 pt-12 pb-1 mb-2 px-1 group relative">
+    <div className="w-full flex flex-col gap-1 pt-8 pb-1 mb-2 px-1 group relative">
       
       {/* 顶部中央装饰点 */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 opacity-20">

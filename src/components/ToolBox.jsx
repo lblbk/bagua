@@ -45,7 +45,9 @@ const ToolBox = ({ finalGuaInfo, question, targetRef }) => {
       const timeStr = String(now.getHours()).padStart(2, '0') + 
                       String(now.getMinutes()).padStart(2, '0') + 
                       String(now.getSeconds()).padStart(2, '0');
-      link.download = `问卦_${finalGuaInfo.benGua.name}_${finalGuaInfo.zhiGua.name}_${dateStr}_${timeStr}.png`;
+      const benName = finalGuaInfo.benGua.name;
+      const zhiName = finalGuaInfo.zhiGua ? `之${finalGuaInfo.zhiGua.name}` : '静卦';
+      link.download = `问卦_${benName}${zhiName}_${dateStr}_${timeStr}.png`;
       link.href = dataUrl;
       link.click();
       
@@ -85,7 +87,7 @@ const ToolBox = ({ finalGuaInfo, question, targetRef }) => {
       {/* 标题栏：修改为与 HistoryList 等一致的左对齐样式 */}
       <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 dark:border-slate-800 px-1">
         <h3 className="text-gray-400 dark:text-gray-500 font-bold text-xs uppercase tracking-widest">
-          存档分享
+          留影
         </h3>
       </div>
       
