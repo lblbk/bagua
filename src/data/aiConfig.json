@@ -1,0 +1,22 @@
+{
+  "providers": {
+    "aliyun": {
+      "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "apiKeyEnv": "VITE_DASHSCOPE_API_KEY",
+      "models": {
+        "qwen3.5-plus": "qwen3.5-plus"
+      }
+    },
+    "volcengine": {
+      "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+      "apiKeyEnv": "VITE_VOLCENGINE_API_KEY",
+      "models": {
+        "doubao-seed-1.6-flash": "ep-20260305111545-2j5v7"
+      }
+    }
+  },
+  "defaultConfig": {
+    "provider": "volcengine",
+    "modelKey": "doubao-seed-1.6-flash"
+  }
+}

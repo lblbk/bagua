@@ -19,10 +19,16 @@ npm install
 
 3. [注]切换到 main 也是一样操作
 
-2. 切换 taro 进行开发
-
 ```
 cd bagua
 git checkout main   # 通常默认 main
 npm install
+```
+
+4. 运行
+
+```bash
+npm run dev:h5
+
+npm run dev:weapp
 ```
