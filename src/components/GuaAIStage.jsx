@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { fetchAIInterpretation, generateDivinationPrompt } from '../utils/aiService';
 
@@ -61,6 +61,16 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
   const [error, setError] = useState(null);
   const [isExpanded, setIsExpanded] = useState(true);
 
+  // 核心优化 1：引入 ref 防止组件卸载导致定时器内存泄漏
+  const timerRef = useRef(null);
+
+  // 核心优化 2：组件卸载时强制清理定时器
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
   const handleInterpret = async () => {
     if (loading) return;
     setLoading(true);
@@ -69,15 +79,42 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
 
     const prompt = generateDivinationPrompt({ question, finalGuaInfo, benDetail: detail, zhiDetail, history });
 
+    // --- 核心优化区：缓存池与节流渲染 ---
+    let accumulatedText = ""; // 记录已经渲染到页面的完整文本
+    let bufferText = "";      // 暂存刚刚收到但还没渲染的碎片文本
+
+    // 设定一个 60ms 的节流定时器 (约等于 16fps，肉眼看起来非常丝滑且不卡顿)
+    timerRef.current = setInterval(() => {
+      if (bufferText.length > 0) {
+        accumulatedText += bufferText;
+        bufferText = ""; // 清空暂存区
+        setInterp(accumulatedText); // 统一触发 React 渲染
+      }
+    }, 60);
+
     try {
       await fetchAIInterpretation(
         prompt, 
-        (chunk) => setInterp(prev => prev + chunk),
+        (chunk) => {
+          // 收到数据时，绝对不直接触发 setState，而是塞进缓存池
+          bufferText += chunk;
+        },
         (err) => setError(err || "解析失败")
       );
     } catch (err) {
       setError("AI 服务暂时不可用");
     } finally {
+      // 无论成功还是失败，结束时必须清理定时器
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      
+      // 把最后剩下的一点尾巴渲染出来
+      if (bufferText.length > 0) {
+        accumulatedText += bufferText;
+        setInterp(accumulatedText);
+      }
       setLoading(false);
     }
   };
@@ -109,7 +146,7 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
             </p>
             <button 
               onClick={handleInterpret} 
-              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all text-sm"
+              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all text-sm group relative overflow-hidden"
             >
               <span className="relative z-10 flex items-center gap-2 text-base">
                 洞见天机
@@ -127,6 +164,7 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
                   {interp}
                 </ReactMarkdown>
                 
+                {/* 模拟打字机光标闪烁 */}
                 {loading && (
                   <span className="inline-block w-1 h-3 ml-1 bg-indigo-500/50 animate-bounce align-middle" />
                 )}
@@ -135,7 +173,7 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
 
             {loading && (
               <div className="flex justify-center items-center gap-2 mt-4 text-[10px] text-indigo-400 italic">
-                <span className="animate-spin">⚙</span>
+                <span className="animate-spin text-sm">⚙</span>
                 正在为您解读卦象...
               </div>
             )}
