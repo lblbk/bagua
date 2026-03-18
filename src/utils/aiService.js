@@ -41,7 +41,7 @@ ${movingLines.length > 0 ? movingLinesDetail : "此卦为静卦，无变爻，�
 ## 要求 (严格执行)
 1. **语言风格**：直白易懂，沉稳理性有逻辑，充满理解和共情，像导师一样分析利弊提供方法论。
 2. **结构化输出**：必须严格按照以下 Markdown 格式，且标题后必须带中文冒号“：”。
-3. **字数限制**：总字数严控在 300-350 字之间，言简意赅。
+3. **字数限制**：总字数严控在 500-550 字之间，言简意赅。
 
 ## 3. 回复模板 (请按此结构回复)
 
@@ -59,56 +59,66 @@ ${movingLines.length > 0 ? movingLinesDetail : "此卦为静卦，无变爻，�
 };
 
 export const fetchAIInterpretation = async (prompt, onChunk, onError) => {
-  // 1. 读取配置文件
-  const workerUrl = aiConfig.workerUrl;
-  const { provider, modelKey } = aiConfig.defaultConfig;
-  const config = aiConfig.providers[provider];
-  const baseUrl = config.baseUrl;
-  const apiKeyEnv = config.apiKeyEnv;
-  const modelId = config.models[modelKey];
+    const { provider, modelKey } = aiConfig.defaultConfig;
+    const config = aiConfig.providers[provider];
+    const modelId = config.models[modelKey];
+    const baseUrl = config.baseUrl;
+    const workerUrl = aiConfig.workerUrl;
 
-  try {
-    // 2. 将纯配置参数发给你的 Worker 网关
-    const response = await fetch(workerUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        prompt: prompt,
-        baseUrl: baseUrl,
-        apiKeyEnv: apiKeyEnv,
-        modelId: modelId 
-      })
-    });
+    try {
+        const response = await fetch(workerUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                prompt: prompt,
+                baseUrl: baseUrl,
+                apiKeyEnv: config.apiKeyEnv,
+                modelId: modelId 
+            })
+        });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`请求失败: ${response.status} ${errorData.error || ''}`);
-    }
-
-    // --- 3. 标准流式处理逻辑 ---
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split('\n');
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const jsonStr = line.replace('data: ', '').trim();
-          if (jsonStr === '[DONE]') continue;
-          try {
-            const data = JSON.parse(jsonStr);
-            const content = data.choices[0]?.delta?.content || "";
-            if (content) onChunk(content);
-          } catch (e) {
-            // 解析错误可忽略
-          }
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`请求失败: ${response.status} ${errorText}`);
         }
-      }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        
+        // --- 核心改进：残余字符串缓冲区 ---
+        let remainder = ""; 
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            // 将新收到的碎片与上次剩下的碎片拼接
+            const chunk = remainder + decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+
+            // 最后一行可能是不完整的，存入 remainder 等下次处理
+            remainder = lines.pop(); 
+
+            for (let line of lines) {
+                line = line.trim();
+                if (!line || line === 'data: [DONE]') continue;
+
+                if (line.startsWith('data: ')) {
+                    const dataStr = line.replace('data: ', '').trim();
+                    try {
+                        const data = JSON.parse(dataStr);
+                        // 兼容不同平台的返回结构 (choices[0].delta.content)
+                        const content = data.choices[0]?.delta?.content || "";
+                        if (content) onChunk(content);
+                    } catch (e) {
+                        // 如果还是解析失败，说明这一行数据有问题，记录但不中断
+                        console.warn("解析单行 JSON 失败，已跳过:", line);
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        console.error("fetchAIInterpretation 错误:", err);
+        onError(err.message);
     }
-  } catch (err) {
-    onError(err.message);
-  }
 };
