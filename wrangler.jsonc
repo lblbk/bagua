@@ -7,6 +7,13 @@
 	"name": "bagua",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-03-10",
+	"workers_dev": false,
+	"routes": [
+		{
+			"pattern": "webagua.lblbk.top",
+			"custom_domain": true
+		}
+	],
 	"observability": {
 		"enabled": true
 	},
