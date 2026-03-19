@@ -4,6 +4,8 @@
 
 * 创建新项目
 
+这里都是默认就可以，选择最简单的模板，或者按需
+
 ```
 npm create cloudflare@latest name-of-worker
 ```
@@ -38,3 +40,24 @@ npm run dev
 ```
 
 ## advance 
+
+1. cf 链接 github rep
+
+其他通常默认就可以
+
+```
+构建命令:无
+部署命令:npx wrangler deploy
+根目录:/
+```
+
+2. **cf 线上部署**
+
+cf 网页端 `设置 (Settings) > 变量和机密 (Variables and Secrets)` 只能提供明文保存，链接 rep 后每次重新部署都会被清除，这里需要用下面方案上传
+
+```bash
+# 初次设置会要求登录 cf 
+npx wrangler secret put VOLCENGINE_API_KEY
+```
+
+此时在 `设置 (Settings) > 变量和机密 (Variables and Secrets)` 可以看到一个密钥
