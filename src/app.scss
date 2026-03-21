@@ -1,7 +1,62 @@
 @use 'tailwindcss/base' as *;
 @use 'tailwindcss/components' as *;
 @use 'tailwindcss/utilities' as *;
-// 不使用 sass 就这么写
-// @tailwind base;
-// @tailwind components;
-// @tailwind utilities;
+
+/* 统一所有元素的盒模型，防止 padding 撑开宽度 */
+view, text, scroll-view, input, textarea, image {
+  box-sizing: border-box;
+}
+
+/* 确保页面高度撑满 */
+page {
+  height: 100%;
+  width: 100%;
+}
+
+/* 在你的全局样式文件中添加，例如 app.scss */
+.prose {
+  /* 列表项样式 */
+  .li {
+    margin-bottom: 8px;
+    display: flex;
+    gap: 8px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #475569; /* slate-600 */
+    .dark & {
+      color: #cbd5e1; /* slate-300 */
+    }
+  }
+  .li-circle {
+    color: #818cf8; /* indigo-400 */
+    margin-top: 4px;
+    font-size: 10px;
+  }
+
+  /* 段落样式 */
+  .p {
+    margin-bottom: 12px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #475569; /* slate-600 */
+    .dark & {
+      color: #cbd5e1; /* slate-300 */
+    }
+  }
+
+  /* 加粗标题样式 */
+  .strong {
+    display: block;
+    margin-top: 20px;
+    margin-bottom: 8px;
+    color: #4f46e5; /* indigo-600 */
+    font-weight: bold;
+    font-size: 14px;
+    border-left: 2px solid #6366f1; /* indigo-500 */
+    padding-left: 8px;
+    letter-spacing: 0.05em;
+    .dark & {
+      color: #818cf8; /* indigo-400 */
+    }
+  }
+}

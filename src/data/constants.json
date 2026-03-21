@@ -1,0 +1,114 @@
+{
+  "appTitle": "周易卜卦",
+  "coin": {
+    "heads": "字",
+    "tails": "花"
+  },
+  "header": {
+    "subtitle": "大衍之数 · 一念乾坤",
+    "title": "问卦",
+    "yangHeads": "字面为阳",
+    "yangTails": "花面为阳",
+    "themeDark": "🌙",
+    "themeLight": "☀️"
+  },
+  "questionStage": {
+    "sectionTitle": "何为",
+    "askedTitle": "所问之事：",
+    "restartBtn": "再起一卦",
+    "suggestions": ["今日财运", "事业发展", "健康平安"],
+    "placeholder": "心中默念所问之事，在此输入...",
+    "submitBtn": "开启占卜",
+    "processTitle": "占卜过程",
+    "processDesc": "静心，掷出，判定阴阳，往复六次。",
+    "ruleTitle": "占卜原则",
+    "rules": ["不诚不占", "无疑不占", "不义不占"]
+  },
+  "confirmModal": {
+    "defaultTitle": "确认重置？",
+    "defaultMessage": "当前占卜记录和结果将会被清空，确定要再起一卦吗？",
+    "cancelBtn": "取消",
+    "confirmBtn": "确定"
+  },
+  "divination": {
+    "modes": {
+      "manual": "手动",
+      "semi": "半自动",
+      "full": "全自动"
+    },
+    "control": {
+      "idle": {
+        "manual": "开始转动",
+        "semi": "掷一次",
+        "full": "开始排盘"
+      },
+      "spinning": {
+        "manual": "点击停止",
+        "auto": "转动中..."
+      },
+      "stopping": "正在减速...",
+      "finished": "占卜已圆满",
+      "autoSequencePrefix": "自动排盘中..."
+    }
+  },
+  "historyList": {
+    "title": "排盘",
+    "emptyTip": "点击开始进行排盘",
+    "autoRunning": "● 自动运行中",
+    "yaoNames": ["初爻", "二爻", "三爻", "四爻", "五爻", "上爻"]
+  },
+  "guaResult": {
+    "title": "卦象",
+    "benGuaLabel": "本卦",
+    "zhiGuaLabel": "之卦",
+    "noChangeYao": "得 {name} 卦，无变爻",
+    "withChangeYao": "由 {benName} 卦 变 {zhiName} 卦"
+  },
+  "guaDetail": {
+    "title": "卦辞",
+    "benGuaTab": "本卦",
+    "zhiGuaTab": "之卦",
+    "sections": {
+      "image": "卦象",
+      "guaCi": "卦辞",
+      "xiangYue": "象曰",
+      "yaoCi": "爻辞"
+    }
+  },
+  "guaAI": {
+    "title": "推演",
+    "introQuote": "“大衍之数五十，其用四十有九”",
+    "btnText": "洞见天机",
+    "loadingTip": "正在为您推演天机...",
+    "errorDefault": "解析失败",
+    "errorService": "AI 服务暂时不可用",
+    "footerQuote": "「 变动不居，周流六虚，唯变所适 」",
+    "footerSource": "— 《易·系辞》"
+  },
+  "toolBox": {
+    "title": "工具",
+    "btns": {
+      "snapshot": "留影",
+      "share": "分享",
+      "copy": "复制"
+    },
+    "copySuccess": "详尽卦象已复制",
+    "notDeveloped": "功能开发中，敬请期待",
+    "copyHeader": "【问卦】",
+    "copyQuestion": "问事：",
+    "copyBenGua": "本卦：",
+    "copyZhiGua": "变卦：",
+    "copyMovingYao": "动爻提示：",
+    "copyFooter": "\n--- 变动不居，周流六虚，唯变所适 ---",
+    "shareData": {
+      "title": "我刚才占了一卦，卦象是：{guaName}",
+      "path": "/pages/index/index",
+      "defaultTitle": "周易卜卦 - 变动不居，唯变所适"
+    }
+  },
+  "footer": {
+    "title": "易经 · 六爻占卜",
+    "disclaimer": "仅供娱乐，切莫当真",
+    "copyrightPrefix": "©"
+  }
+}

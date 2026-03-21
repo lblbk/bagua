@@ -1,24 +1,22 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import Taro from "@tarojs/taro";
+import Taro, { useDidShow, useShareAppMessage } from "@tarojs/taro";
 import { View } from "@tarojs/components";
 
-// 注意：Taro (Webpack) 默认不支持 ?raw 导入。
-// 建议：将 hexagrams.md 的内容作为一个字符串导出到 hexagrams.ts 中，例如：
-// export const hexagramsMd = `...你的 markdown 内容...`;
-import hexagramsMd from "../../data/hexagrams.md?raw";
+import constants from "../../data/constants.json";
+import { hexagramsMd } from "../../data/hexagrams";
 import { parseHexagramMarkdown } from "../../utils/ParserMarkdown";
 import { calculateYao, calculateFinalHexagram } from "../../utils/divination";
 
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
-// import QuestionStage from "../../components/QuestionStage";
-// import DivinationStage from "../../components/DivinationStage";
-// import HistoryList from "../../components/HistoryList";
-// import GuaResultStage from "../../components/GuaResultStage";
-// import GuaDetailStage from "../../components/GuaDetailStage";
-// import GuaAIStage from "../../components/GuaAIStage";
-// import ToolBox from "../../components/ToolBox";
-// import ConfirmModal from "../../components/ConfirmModal";
+import QuestionStage from "../../components/QuestionStage";
+import ConfirmModal from "../../components/ConfirmModal";
+import DivinationStage from "../../components/DivinationStage";
+import HistoryList from "../../components/HistoryList";
+import GuaResultStage from "../../components/GuaResultStage";
+import GuaDetailStage from "../../components/GuaDetailStage";
+import GuaAIStage from "../../components/GuaAIStage";
+import ToolBox from "../../components/ToolBox";
 
 // --- TypeScript 接口定义 ---
 interface HistoryRecord {
@@ -60,27 +58,51 @@ export default function Index() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const captureRef = useRef<any>(null);
 
+  // 1. 同步微信原生 UI 颜色的函数
+  const syncNativeTheme = (isDark: boolean) => {
+    Taro.setNavigationBarColor({
+      frontColor: isDark ? "#ffffff" : "#000000",
+      backgroundColor: isDark ? "#0f172a" : "#f8fafc",
+      animation: { duration: 300, timingFunc: "easeInOut" },
+    });
+    Taro.setBackgroundColor({
+      backgroundColor: isDark ? "#0f172a" : "#f8fafc",
+    });
+  };
+
+  // 2. 初始化与监听系统主题
   useEffect(() => {
     setHexagramDetails(parseHexagramMarkdown(hexagramsMd));
-    // 替换 localStorage 为 Taro API
-    const theme = Taro.getStorageSync("theme");
-    const isDark = theme === "dark";
-    setIsDarkMode(isDark);
+
+    const appBaseInfo = Taro.getAppBaseInfo();
+    const initialDark = appBaseInfo.theme === "dark";
+    setIsDarkMode(initialDark);
+    syncNativeTheme(initialDark);
+
+    // 监听系统主题变化
+    const themeListener = (res: Taro.onThemeChange.CallbackResult) => {
+      const isDark = res.theme === "dark";
+      setIsDarkMode(isDark);
+      syncNativeTheme(isDark);
+    };
+
+    Taro.onThemeChange(themeListener);
 
     return () => {
+      Taro.offThemeChange(themeListener);
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
 
-  // const { currentDetail, zhiDetail } = useMemo(() => {
-  //   if (!finalGuaInfo) return { currentDetail: null, zhiDetail: null };
-  //   const findD = (name: string) =>
-  //     hexagramDetails.find((d) => d.title.includes(name));
-  //   return {
-  //     currentDetail: findD(finalGuaInfo.benGua.name),
-  //     zhiDetail: finalGuaInfo.zhiGua ? findD(finalGuaInfo.zhiGua.name) : null,
-  //   };
-  // }, [finalGuaInfo, hexagramDetails]);
+  const { currentDetail, zhiDetail } = useMemo(() => {
+    if (!finalGuaInfo) return { currentDetail: null, zhiDetail: null };
+    const findD = (name: string) =>
+      hexagramDetails.find((d) => d.title.includes(name));
+    return {
+      currentDetail: findD(finalGuaInfo.benGua.name),
+      zhiDetail: finalGuaInfo.zhiGua ? findD(finalGuaInfo.zhiGua.name) : null,
+    };
+  }, [finalGuaInfo, hexagramDetails]);
 
   // 重构暗黑模式：小程序没有 document，需要通过外层 View 的 className 来控制
   const toggleDarkMode = () => {
@@ -161,15 +183,37 @@ export default function Index() {
     if (++completedCount.current === 3) processRoundEnd();
   };
 
+  useShareAppMessage((res) => {
+    const { toolBox: t } = constants;
+    const guaName = finalGuaInfo?.benGua?.name || "";
+
+    // 1. 防御性检查：如果 constants 还没加载好或者字段缺失，返回默认标题
+    if (!t || !t.shareData) {
+      return {
+        title: t.copyHeader,
+        path: "/pages/index/index",
+      };
+    }
+
+    // 2. 如果已经占卜完成，显示带卦名的标题；否则显示默认标题
+    const shareTitle = guaName
+      ? t.shareData.title.replace("{guaName}", guaName)
+      : t.shareData.defaultTitle;
+
+    return {
+      title: shareTitle,
+      path: t.shareData.path,
+      // imageUrl: '/assets/share-cover.png' // 可选：分享时的封面图
+    };
+  });
+
   return (
-    /* 小程序暗黑模式：通过在外层包裹一个带 'dark' 类的 View 来触发 Tailwind 的 dark: 前缀 */
-    <View className={`${isDarkMode ? "dark" : ""}`}>
-      {/* 替换 div 为 View，保留所有 Tailwind 类 */}
-      <View className="min-h-screen w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-500 pt-6 pb-10">
+    /* 核心：动态绑定 dark 类名，满足 weapp-tailwindcss 的 class 模式 */
+    <View className={isDarkMode ? "dark" : ""}>
+      <View className="min-h-screen w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-500 pt-2 pb-10">
         <View
           ref={captureRef}
-          data-capture-area="true"
-          className="w-full max-w-md px-4 flex flex-col items-center gap-6 mx-auto relative"
+          className="w-full max-w-md px-4 flex flex-col items-center gap-4 mx-auto relative"
         >
           <Header
             yangSetting={yangSetting}
@@ -182,7 +226,7 @@ export default function Index() {
             toggleDarkMode={toggleDarkMode}
           />
 
-          {/*<QuestionStage
+          <QuestionStage
             question={question}
             setQuestion={setQuestion}
             isLocked={isQuestionLocked}
@@ -193,16 +237,17 @@ export default function Index() {
             onRestart={() =>
               isQuestionLocked ? setShowConfirm(true) : executeRestart(true)
             }
-          />*/}
+            isDarkMode={isDarkMode}
+          />
 
-          {/*<ConfirmModal
+          <ConfirmModal
             isOpen={showConfirm}
             onClose={() => setShowConfirm(false)}
             onConfirm={() => executeRestart(true)}
-          />*/}
+          />
 
-          {/*{isQuestionLocked && (
-            <View className="w-full flex flex-col gap-6 animate-fadeIn">
+          {isQuestionLocked && (
+            <View className="w-full flex flex-col gap-4 animate-fadeIn">
               <DivinationStage
                 status={status}
                 selectedMode={selectedMode}
@@ -244,12 +289,14 @@ export default function Index() {
                   <ToolBox
                     finalGuaInfo={finalGuaInfo}
                     question={question}
-                    targetRef={captureRef}
+                    detail={currentDetail} // 这里传入本卦详情
+                    zhiDetail={zhiDetail} // 这里传入变卦详情
+                    history={history} // 这里传入历史排盘记录
                   />
                 </>
               )}
             </View>
-          )}*/}
+          )}
           <Footer />
         </View>
       </View>

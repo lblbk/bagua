@@ -1,37 +1,42 @@
 // src/utils/divination.js
 
-import divinationData from '../data/divination.json';
+import divinationData from "../data/divination.json";
 
 const GUA_YAO_CONFIG = divinationData.guaYaoConfig;
 
 const hexagramMap = new Map();
-divinationData.hexagramsData.forEach(line => {
+divinationData.hexagramsData.forEach((line) => {
   const cleanLine = line.trim();
-  if (!cleanLine) return; 
+  if (!cleanLine) return;
 
-  const [binary, id, name, commonName] = cleanLine.split(',');
-  
-  hexagramMap.set(binary.trim(), { 
-    id: parseInt(id), 
-    name: name?.trim(), 
+  const [binary, id, name, commonName] = cleanLine.split(",");
+
+  hexagramMap.set(binary.trim(), {
+    id: parseInt(id),
+    name: name?.trim(),
     commonName: commonName?.trim(),
-    binary: binary.trim()
+    binary: binary.trim(),
   });
 });
 
 export const calculateYao = (coinResults, yangSetting) => {
-  const valHeads = yangSetting === 'heads' ? 3 : 2;
-  const valTails = yangSetting === 'tails' ? 3 : 2;
+  const valHeads = yangSetting === "heads" ? 3 : 2;
+  const valTails = yangSetting === "tails" ? 3 : 2;
 
   let sum = 0;
-  coinResults.forEach(r => {
-    if (r === '字') sum += valHeads;
+  coinResults.forEach((r) => {
+    if (r === "字") sum += valHeads;
     else sum += valTails;
   });
 
-  return GUA_YAO_CONFIG[sum] || { 
-    name: '未知', mark: '?', color: 'text-gray-400', type: 'unknown' 
-  };
+  return (
+    GUA_YAO_CONFIG[sum] || {
+      name: "未知",
+      mark: "?",
+      color: "text-gray-400",
+      type: "unknown",
+    }
+  );
 };
 
 export const calculateFinalHexagram = (history) => {
@@ -41,21 +46,21 @@ export const calculateFinalHexagram = (history) => {
   // 这正好和 JSON 中的 "101011" (上爻...初爻) 顺序完美对应。
   // 因此我们直接遍历拼接，不需要 reverse。
 
-  let benGuaBinary = '';
-  let zhiGuaBinary = '';
+  let benGuaBinary = "";
+  let zhiGuaBinary = "";
   let hasChangingLine = false;
 
-  history.forEach(yao => {
-    const isYang = yao.guaType === 'yang';
-    const bit = isYang ? '1' : '0';
-    
+  history.forEach((yao) => {
+    const isYang = yao.guaType === "yang";
+    const bit = isYang ? "1" : "0";
+
     benGuaBinary += bit;
 
-    if (yao.guaMark) { 
-      zhiGuaBinary += bit === '1' ? '0' : '1'; 
+    if (yao.guaMark) {
+      zhiGuaBinary += bit === "1" ? "0" : "1";
       hasChangingLine = true;
     } else {
-      zhiGuaBinary += bit; 
+      zhiGuaBinary += bit;
     }
   });
 
@@ -65,8 +70,8 @@ export const calculateFinalHexagram = (history) => {
   if (!benGua) {
     console.error(`未找到对应卦象: ${benGuaBinary}`);
     return {
-      benGua: { name: '未知', commonName: '未知卦象', id: 0 },
-      zhiGua: null
+      benGua: { name: "未知", commonName: "未知卦象", id: 0 },
+      zhiGua: null,
     };
   }
 

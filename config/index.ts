@@ -58,7 +58,6 @@ export default defineConfig<"webpack5">(async (merge, { command, mode }) => {
             },
           },
         });
-        chain.module.rule("markdown").test(/\.md$/).type("asset/source");
       },
     },
     h5: {
@@ -88,7 +87,6 @@ export default defineConfig<"webpack5">(async (merge, { command, mode }) => {
       },
       webpackChain(chain) {
         chain.resolve.plugin("tsconfig-paths").use(TsconfigPathsPlugin);
-        chain.module.rule("markdown").test(/\.md$/).type("asset/source");
       },
     },
     rn: {
