@@ -12,12 +12,12 @@
       "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
       "apiKeyEnv": "VOLCENGINE_API_KEY",
       "models": {
-        "doubao-seed-1.6-flash": "ep-20260305111545-2j5v7"
+        "bagua-seed-1.8": "ep-20260323095003-657zc"
       }
     }
   },
   "defaultConfig": {
     "provider": "volcengine",
-    "modelKey": "doubao-seed-1.6-flash"
+    "modelKey": "bagua-seed-1.8"
   }
 }
