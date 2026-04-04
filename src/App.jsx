@@ -2,10 +2,12 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import hexagramsMd from './data/hexagrams.md?raw';
 import { parseHexagramMarkdown } from './utils/ParserMarkdown';
 import { calculateYao, calculateFinalHexagram } from './utils/divination';
+import { saveHistoryToLocal } from './utils/storage';
 
 import Header from './components/Header';
 import Footer from './components/Footer';
 import QuestionStage from './components/QuestionStage';
+import HistoryCalendar from './components/HistoryCalendar';
 import DivinationStage from './components/DivinationStage';
 import HistoryList from './components/HistoryList';
 import GuaResultStage from './components/GuaResultStage';
@@ -18,6 +20,8 @@ function App() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isQuestionLocked, setIsQuestionLocked] = useState(false);
   const [question, setQuestion] = useState('');
+  const [refreshCalendar, setRefreshCalendar] = useState(0);
+  const [aiResponse, setAiResponse] = useState('');
   const [selectedMode, setSelectedMode] = useState('full');
   const [status, setStatus] = useState('idle');
   const [isAutoSequence, setIsAutoSequence] = useState(false);
@@ -34,6 +38,28 @@ function App() {
   const roundCounter = useRef(1);
   const timerRef = useRef(null);
   const captureRef = useRef(null);
+
+  const loadPastRecord = (record) => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    executeRestart(false);
+    setQuestion(record.question);
+    setIsQuestionLocked(true);
+    setHistory(record.history);
+    setFinalGuaInfo(record.finalGuaInfo);
+    setAiResponse(record.aiResponse || ''); // 恢复保存的 AI 内容
+    setStatus('finished');
+  };
+
+  const handleSaveAfterAI = (finalAiText) => {
+    setAiResponse(finalAiText); // 更新当前状态
+    saveHistoryToLocal({
+      question: question,
+      history: history,
+      finalGuaInfo: finalGuaInfo,
+      aiResponse: finalAiText // 显式保存 AI 结果
+    });
+    setRefreshCalendar(v => v + 1); // 刷新日历标记
+  };
 
   useEffect(() => {
     setHexagramDetails(parseHexagramMarkdown(hexagramsMd));
@@ -59,11 +85,16 @@ function App() {
   const executeRestart = (clearAll = true) => {
     setHistory([]);
     setFinalGuaInfo(null);
+    setAiResponse(''); // 清空 AI 解读内容
     roundCounter.current = 1;
     setStatus('idle');
     setIsAutoSequence(false);
     clearTimeout(timerRef.current);
-    if (clearAll) { setQuestion(''); setIsQuestionLocked(false); setShowConfirm(false); }
+    if (clearAll) {
+      setQuestion('');
+      setIsQuestionLocked(false);
+      setShowConfirm(false);
+    }
   };
 
   const startRound = () => {
@@ -100,6 +131,7 @@ function App() {
         setStatus('finished');
         setIsAutoSequence(false);
         setFinalGuaInfo(calculateFinalHexagram(next));
+        setAiResponse('');
       } else {
         setStatus('idle');
         if (selectedMode === 'full' && isAutoSequence) timerRef.current = setTimeout(startRound, 2000);
@@ -124,10 +156,28 @@ function App() {
           isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode}
         />
 
+        <HistoryCalendar
+          refreshTrigger={refreshCalendar}
+          onSelectRecord={loadPastRecord}
+        />
+
         <QuestionStage
           question={question} setQuestion={setQuestion} isLocked={isQuestionLocked}
           onQuestionSubmit={(q) => { setQuestion(q); setIsQuestionLocked(true); }}
-          onRestart={() => isQuestionLocked ? setShowConfirm(true) : executeRestart(true)}
+          onRestart={() => {
+            // 逻辑：如果已经出结果了（finished状态），直接重置，不弹窗
+            if (status === 'finished') {
+              executeRestart(true);
+            }
+            // 如果问题已锁定但还没摇完（正在起卦中），为了防止误触，弹出确认框
+            else if (isQuestionLocked) {
+              setShowConfirm(true);
+            }
+            // 其他情况（如初始状态）直接重置
+            else {
+              executeRestart(true);
+            }
+          }}
         />
 
         <ConfirmModal isOpen={showConfirm} onClose={() => setShowConfirm(false)} onConfirm={() => executeRestart(true)} />
@@ -148,7 +198,7 @@ function App() {
               <>
                 <GuaResultStage history={history} finalGuaInfo={finalGuaInfo} />
                 <GuaDetailStage detail={currentDetail} zhiDetail={zhiDetail} history={history} />
-                <GuaAIStage detail={currentDetail} zhiDetail={zhiDetail} history={history} finalGuaInfo={finalGuaInfo} question={question} />
+                <GuaAIStage detail={currentDetail} zhiDetail={zhiDetail} history={history} finalGuaInfo={finalGuaInfo} question={question} savedResponse={aiResponse} onSaveRecord={handleSaveAfterAI} />
                 <ToolBox finalGuaInfo={finalGuaInfo} question={question} targetRef={captureRef} />
               </>
             )}

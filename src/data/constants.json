@@ -6,6 +6,12 @@
         "yangTails": "花面为阳",
         "themeToggle": "切换主题"
     },
+    "historyPanel": {
+        "title": "回溯",
+        "todayLimit": "— 仅保留每日最近 3 次深度占卜 —",
+        "empty": "当日暂无已存记录",
+        "tip": "点击记录恢复占卜现场"
+    },
     "questionStage": {
         "title": "何为",
         "quickSuggestions": [

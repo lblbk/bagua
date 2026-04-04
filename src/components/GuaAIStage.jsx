@@ -56,13 +56,27 @@ const QuoteFooter = () => (
   </div>
 );
 
-const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
+// ... 前面的 import 保持不变
+
+// 1. 在参数中解构 savedResponse 和 onSaveRecord
+const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question, savedResponse, onSaveRecord }) => {
   const [interp, setInterp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isExpanded, setIsExpanded] = useState(true);
 
   const timerRef = useRef(null);
+
+  // 2. 新增：监听 savedResponse。如果是回溯，直接填入内容，不再显示“开始解卦”按钮
+  useEffect(() => {
+    if (savedResponse) {
+      setInterp(savedResponse);
+      setLoading(false);
+    } else {
+      // 如果没有已保存的内容（比如新起了一卦），则清空界面
+      setInterp("");
+    }
+  }, [savedResponse]);
 
   useEffect(() => {
     return () => {
@@ -104,18 +118,23 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      if (bufferText.length > 0) {
-        accumulatedText += bufferText;
-        setInterp(accumulatedText);
-      }
+
+      // 3. 关键修改：确保最后一点 buffer 也刷入 accumulatedText
+      const finalText = accumulatedText + bufferText;
+      setInterp(finalText);
       setLoading(false);
+
+      // 4. 执行保存：只有在真正请求 AI 成功并得到文本后，才调用 App 传来的保存函数
+      if (finalText && !error) {
+        onSaveRecord(finalText);
+      }
     }
   };
 
   return (
     <div className="w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-3xl shadow-xl border border-white/50 dark:border-slate-800 p-6 overflow-hidden transition-all duration-500">
 
-      {/* 头部标题栏：字体放大到 text-lg */}
+      {/* 头部标题栏保持不变 */}
       <div
         className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-800 pb-2 cursor-pointer group"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -130,6 +149,7 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
       </div>
 
       <div className={`transition-all duration-500 ${isExpanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+        {/* 这里逻辑变为：如果没有内容 且 不在加载中，显示按钮 */}
         {!interp && !loading ? (
           <div className="py-8 text-center flex flex-col items-center">
             <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/20 rounded-full flex items-center justify-center mb-4 text-2xl">
@@ -170,6 +190,7 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
               </div>
             )}
 
+            {/* 有内容且不在加载时，显示底部的名言 */}
             {interp && !loading && <QuoteFooter />}
           </div>
         )}
