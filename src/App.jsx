@@ -85,13 +85,13 @@ function App() {
   const processRoundEnd = () => {
     const info = calculateYao(currentRoundResults.current, yangSetting);
     // 关键修复：显式映射属性名，确保与 HistoryList 等组件兼容
-    const newRecord = { 
-      id: roundCounter.current++, 
-      result: currentRoundResults.current.join(' '), 
-      guaName: info.name, 
-      guaType: info.type, 
-      guaMark: info.mark, 
-      guaColor: info.color 
+    const newRecord = {
+      id: roundCounter.current++,
+      result: currentRoundResults.current.join(' '),
+      guaName: info.name,
+      guaType: info.type,
+      guaMark: info.mark,
+      guaColor: info.color
     };
 
     setHistory(prev => {
@@ -115,18 +115,18 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-500 pt-6 pb-10">
-      <div ref={captureRef} data-capture-area="true" className="w-full max-w-md px-4 flex flex-col items-center gap-6 mx-auto relative">
-        <Header 
-          yangSetting={yangSetting} 
-          toggleYangSetting={() => (status === 'idle' || status === 'finished') && setYangSetting(s => s === 'heads' ? 'tails' : 'heads')} 
-          disabled={status !== 'idle' || isAutoSequence || history.length > 0} 
+    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-500 pt-4 pb-10">
+      <div ref={captureRef} data-capture-area="true" className="w-full max-w-md px-4 flex flex-col items-center gap-4 mx-auto relative">
+        <Header
+          yangSetting={yangSetting}
+          toggleYangSetting={() => (status === 'idle' || status === 'finished') && setYangSetting(s => s === 'heads' ? 'tails' : 'heads')}
+          disabled={status !== 'idle' || isAutoSequence || history.length > 0}
           isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode}
         />
 
-        <QuestionStage 
+        <QuestionStage
           question={question} setQuestion={setQuestion} isLocked={isQuestionLocked}
-          onQuestionSubmit={(q) => { setQuestion(q); setIsQuestionLocked(true); }} 
+          onQuestionSubmit={(q) => { setQuestion(q); setIsQuestionLocked(true); }}
           onRestart={() => isQuestionLocked ? setShowConfirm(true) : executeRestart(true)}
         />
 
@@ -134,7 +134,7 @@ function App() {
 
         {isQuestionLocked && (
           <div className="w-full flex flex-col gap-6 animate-fadeIn">
-            <DivinationStage 
+            <DivinationStage
               status={status} selectedMode={selectedMode} isAutoSequence={isAutoSequence} historyCount={history.length}
               coinRefs={coinRefs.current} onSwitchMode={(m) => { setSelectedMode(m); executeRestart(false); }}
               onMainAction={() => {

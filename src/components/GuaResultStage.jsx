@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import constants from '../data/constants.json';
 
 const YaoLine = ({ type, isMoving, mark, isZhiGua }) => {
   // 颜色定义：使用更具对比度的颜色
   const color = type === 'yang' ? 'bg-red-500' : 'bg-blue-600';
-  
+
   return (
     <div className="relative w-full h-7 flex items-center group overflow-visible">
       {/* 爻实体：增加圆角与阴影交互 */}
@@ -22,7 +23,7 @@ const YaoLine = ({ type, isMoving, mark, isZhiGua }) => {
           <div className={`w-full h-full rounded-md ${color}`}></div>
         )}
       </div>
-      
+
       {/* 变爻标识 */}
       {isMoving && !isZhiGua && (
         <span className={`
@@ -38,12 +39,16 @@ const YaoLine = ({ type, isMoving, mark, isZhiGua }) => {
 };
 
 const HexagramVisualizer = ({ history, isZhiGua = false, info }) => {
+  const { guaResultStage } = constants;
   if (!info) return null;
+
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="text-sm font-bold text-gray-800 dark:text-gray-200 tracking-[0.2em] w-full text-left">
         {info.commonName.split(' ')[0]}
-        <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-2 font-normal">{isZhiGua ? "之卦" : "本卦"}</span>
+        <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-2 font-normal">
+          {isZhiGua ? guaResultStage.zhiGuaLabel : guaResultStage.benGuaLabel}
+        </span>
       </div>
       <div className="flex flex-col gap-1 w-36 p-4 pr-8 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm transition-all hover:shadow-md">
         {history.map((record) => {
@@ -59,18 +64,27 @@ const HexagramVisualizer = ({ history, isZhiGua = false, info }) => {
 
 const GuaResultStage = ({ history, finalGuaInfo }) => {
   const [isExpanded, setIsExpanded] = useState(true);
+  const { guaResultStage } = constants;
+
   if (!finalGuaInfo) return null;
 
   return (
-    <div className="w-full bg-white/90 dark:bg-slate-800/90 backdrop-blur rounded-2xl shadow-lg border border-white/50 dark:border-slate-700/50 p-4 mt-6 transition-all duration-500 overflow-hidden">
-      <div 
-        className="flex items-center gap-2 mb-2 pb-2 cursor-pointer hover:opacity-70 transition-opacity"
+    // 移除了 mt-6，使用 p-6 统一内边距
+    <div className="w-full bg-white/90 dark:bg-slate-800/90 backdrop-blur rounded-2xl shadow-lg border border-white/50 dark:border-slate-700/50 p-6 transition-all duration-500 overflow-hidden">
+
+      {/* 统一的标题栏样式 */}
+      <div
+        className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-700 pb-2 cursor-pointer group transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <h3 className="text-gray-400 dark:text-gray-500 font-bold text-xs uppercase tracking-widest">卦象</h3>
-        <span className={`text-gray-300 dark:text-gray-600 text-[10px] transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}>▼</span>
+        <h3 className="text-slate-700 dark:text-slate-300 font-black text-lg tracking-widest group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+          {guaResultStage.title}
+        </h3>
+        <span className={`text-gray-400 dark:text-gray-500 text-xs transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}>
+          ▼
+        </span>
       </div>
-      
+
       <div className={`transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[1200px] opacity-100 mt-2' : 'max-h-0 opacity-0 overflow-hidden'}`}>
         <div className="flex flex-wrap items-center justify-center gap-4 w-full">
           <HexagramVisualizer history={history} info={finalGuaInfo.benGua} isZhiGua={false} />
@@ -84,9 +98,13 @@ const GuaResultStage = ({ history, finalGuaInfo }) => {
 
         <div className="mt-6 text-center pb-2 border-t border-gray-100 dark:border-slate-700 pt-4 px-2">
           <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-            {finalGuaInfo.zhiGua 
-              ? <>由 <span className="text-indigo-600 dark:text-indigo-400 font-bold">{finalGuaInfo.benGua.name}</span> 卦 变 <span className="text-indigo-600 dark:text-indigo-400 font-bold">{finalGuaInfo.zhiGua.name}</span> 卦</>
-              : <>得 <span className="text-indigo-600 dark:text-indigo-400 font-bold">{finalGuaInfo.benGua.name}</span> 卦，无变爻</>
+            {finalGuaInfo.zhiGua
+              ? <>
+                {guaResultStage.changeFrom} <span className="text-indigo-600 dark:text-indigo-400 font-bold">{finalGuaInfo.benGua.name}</span> {guaResultStage.changeTo} <span className="text-indigo-600 dark:text-indigo-400 font-bold">{finalGuaInfo.zhiGua.name}</span> {guaResultStage.changeEnd}
+              </>
+              : <>
+                {guaResultStage.noChangeStart} <span className="text-indigo-600 dark:text-indigo-400 font-bold">{finalGuaInfo.benGua.name}</span> {guaResultStage.noChangeEnd}
+              </>
             }
           </p>
         </div>

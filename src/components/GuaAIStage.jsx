@@ -1,12 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { fetchAIInterpretation, generateDivinationPrompt } from '../utils/aiService';
+// 引入常量
+import constants from '../data/constants.json';
+
+const { guaAIStage } = constants;
 
 /**
- * 1. Markdown 渲染配置 - 调整为精致的小字号
+ * 1. Markdown 渲染配置
  */
 const mdComponents = {
-  // 针对标题类加粗（带冒号）：由 text-lg 降为 text-sm
   strong: ({ children }) => {
     const text = children?.toString() || "";
     return text.includes('：') || text.includes(':') ? (
@@ -19,7 +22,6 @@ const mdComponents = {
       </strong>
     );
   },
-  // 列表项：由 text-base 降为 text-xs
   li: ({ children }) => (
     <li className="mb-2 last:mb-0 flex gap-2 text-xs">
       <span className="text-indigo-400 mt-1 flex-shrink-0 text-[10px]">●</span>
@@ -28,7 +30,6 @@ const mdComponents = {
       </span>
     </li>
   ),
-  // 段落：由 text-base 降为 text-xs
   p: ({ children }) => (
     <p className="mb-3 leading-relaxed text-xs text-slate-600 dark:text-slate-300 last:mb-0">
       {children}
@@ -37,7 +38,7 @@ const mdComponents = {
 };
 
 /**
- * 2. 底部装饰名言组件 - 保持微缩比例
+ * 2. 底部装饰名言组件
  */
 const QuoteFooter = () => (
   <div className="mt-8 pt-4 border-t border-indigo-100/30 dark:border-slate-800 flex flex-col items-center gap-2 animate-fadeIn">
@@ -47,10 +48,10 @@ const QuoteFooter = () => (
       ))}
     </div>
     <p className="text-[10px] text-slate-400 dark:text-slate-500 tracking-[0.2em] font-medium italic">
-      「 变动不居，周流六虚，唯变所适 」
+      {guaAIStage.footer.quote}
     </p>
     <p className="text-[8px] text-slate-300 dark:text-slate-600 scale-90 tracking-tighter">
-      — 《易·系辞》
+      {guaAIStage.footer.source}
     </p>
   </div>
 );
@@ -61,10 +62,8 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
   const [error, setError] = useState(null);
   const [isExpanded, setIsExpanded] = useState(true);
 
-  // 核心优化 1：引入 ref 防止组件卸载导致定时器内存泄漏
   const timerRef = useRef(null);
 
-  // 核心优化 2：组件卸载时强制清理定时器
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -79,38 +78,32 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
 
     const prompt = generateDivinationPrompt({ question, finalGuaInfo, benDetail: detail, zhiDetail, history });
 
-    // --- 核心优化区：缓存池与节流渲染 ---
-    let accumulatedText = ""; // 记录已经渲染到页面的完整文本
-    let bufferText = "";      // 暂存刚刚收到但还没渲染的碎片文本
+    let accumulatedText = "";
+    let bufferText = "";
 
-    // 设定一个 60ms 的节流定时器 (约等于 16fps，肉眼看起来非常丝滑且不卡顿)
     timerRef.current = setInterval(() => {
       if (bufferText.length > 0) {
         accumulatedText += bufferText;
-        bufferText = ""; // 清空暂存区
-        setInterp(accumulatedText); // 统一触发 React 渲染
+        bufferText = "";
+        setInterp(accumulatedText);
       }
     }, 60);
 
     try {
       await fetchAIInterpretation(
-        prompt, 
+        prompt,
         (chunk) => {
-          // 收到数据时，绝对不直接触发 setState，而是塞进缓存池
           bufferText += chunk;
         },
-        (err) => setError(err || "解析失败")
+        (err) => setError(err || guaAIStage.errors.parseFailed)
       );
     } catch (err) {
-      setError("AI 服务暂时不可用");
+      setError(guaAIStage.errors.serviceUnavailable);
     } finally {
-      // 无论成功还是失败，结束时必须清理定时器
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      
-      // 把最后剩下的一点尾巴渲染出来
       if (bufferText.length > 0) {
         accumulatedText += bufferText;
         setInterp(accumulatedText);
@@ -120,15 +113,16 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
   };
 
   return (
-    <div className="w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-3xl shadow-xl border border-white/50 dark:border-slate-800 p-6 mt-6 overflow-hidden transition-all duration-500">
-      {/* 头部标题栏 */}
-      <div 
-        className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 dark:border-slate-800 cursor-pointer" 
+    <div className="w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-3xl shadow-xl border border-white/50 dark:border-slate-800 p-6 overflow-hidden transition-all duration-500">
+
+      {/* 头部标题栏：字体放大到 text-lg */}
+      <div
+        className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-800 pb-2 cursor-pointer group"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
-        <h3 className="text-gray-400 dark:text-gray-500 font-bold text-xs uppercase tracking-widest flex-1">
-          推演
+        <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
+        <h3 className="text-slate-700 dark:text-slate-300 font-black text-lg tracking-widest flex-1 group-hover:text-indigo-600 transition-colors">
+          {guaAIStage.title}
         </h3>
         <span className={`text-gray-300 text-[10px] transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
           ▼
@@ -142,29 +136,27 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
               ✨
             </div>
             <p className="text-xs text-slate-400 dark:text-slate-500 mb-6 italic px-6 leading-relaxed">
-              “大衍之数五十，其用四十有九”
+              {guaAIStage.initial.quote}
             </p>
-            <button 
-              onClick={handleInterpret} 
+            <button
+              onClick={handleInterpret}
               className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all text-sm group relative overflow-hidden"
             >
               <span className="relative z-10 flex items-center gap-2 text-base">
-                洞见天机
+                {guaAIStage.initial.button}
               </span>
               <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500 -skew-x-12 -translate-x-full" />
             </button>
           </div>
         ) : (
           <div className="relative">
-            {/* 内容主容器：背景色变淡，去掉过重的阴影 */}
             <div className={`p-5 rounded-2xl border transition-colors duration-500 bg-gradient-to-b from-indigo-50/20 to-transparent dark:from-indigo-950/10 ${loading ? 'border-indigo-200 animate-pulse' : 'border-indigo-100 dark:border-slate-800'}`}>
-              
+
               <article className="prose prose-sm max-w-none prose-indigo">
                 <ReactMarkdown components={mdComponents}>
                   {interp}
                 </ReactMarkdown>
-                
-                {/* 模拟打字机光标闪烁 */}
+
                 {loading && (
                   <span className="inline-block w-1 h-3 ml-1 bg-indigo-500/50 animate-bounce align-middle" />
                 )}
@@ -174,7 +166,7 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question }) => {
             {loading && (
               <div className="flex justify-center items-center gap-2 mt-4 text-[10px] text-indigo-400 italic">
                 <span className="animate-spin text-sm">⚙</span>
-                正在为您解读卦象...
+                {guaAIStage.loading}
               </div>
             )}
 

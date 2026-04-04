@@ -1,0 +1,130 @@
+{
+    "header": {
+        "subtitle": "大衍之数 · 一念乾坤",
+        "title": "问卦",
+        "yangHeads": "字面为阳",
+        "yangTails": "花面为阳",
+        "themeToggle": "切换主题"
+    },
+    "questionStage": {
+        "title": "何为",
+        "quickSuggestions": [
+            "今日运势",
+            "今日财运",
+            "事业发展",
+            "感情缘分"
+        ],
+        "lockedLabel": "所问之事：",
+        "restartBtn": "再起一卦",
+        "placeholder": "心中默念所问之事，在此输入...",
+        "submitBtn": "开启占卜",
+        "processTitle": "占卜过程",
+        "processDesc": "心中默念所求之事，摇动三枚钱币并掷出，待其落下判定阴阳。如此往复六次以成六爻，方可窥见事物发展之吉凶演化。",
+        "rulesTitle": "占卜原则",
+        "rules": [
+            "不诚不占",
+            "无疑不占",
+            "不义不占"
+        ]
+    },
+    "common": {
+        "confirm": "确定",
+        "cancel": "取消"
+    },
+    "confirmModal": {
+        "defaultTitle": "确认重置？",
+        "defaultMessage": "当前占卜记录和结果将会被清空，确定要再起一卦吗？"
+    },
+    "divinationStage": {
+        "modes": {
+            "manual": "手动",
+            "semi": "半自动",
+            "full": "全自动"
+        },
+        "controls": {
+            "idle": {
+                "manual": "开始转动",
+                "semi": "掷一次",
+                "full": "开始排盘"
+            },
+            "spinning": {
+                "manual": "点击停止",
+                "auto": "转动中..."
+            },
+            "stopping": "正在减速...",
+            "finished": "占卜已圆满",
+            "autoSpinningPrefix": "自动排盘中..."
+        }
+    },
+    "historyList": {
+        "yaoNames": [
+            "初爻",
+            "二爻",
+            "三爻",
+            "四爻",
+            "五爻",
+            "上爻"
+        ],
+        "defaultYaoSuffix": "爻",
+        "title": "排盘",
+        "autoRunning": "自动运行中",
+        "emptyText": "点击开始进行排盘"
+    },
+    "guaResultStage": {
+        "title": "卦象",
+        "benGuaLabel": "本卦",
+        "zhiGuaLabel": "之卦",
+        "changeFrom": "由",
+        "changeTo": "卦 变",
+        "changeEnd": "卦",
+        "noChangeStart": "得",
+        "noChangeEnd": "卦，无变爻"
+    },
+    "guaDetailStage": {
+        "title": "卦辞",
+        "benGuaTab": "本卦",
+        "zhiGuaTab": "之卦",
+        "sections": {
+            "guaXiang": "卦象",
+            "guaCi": "卦辞",
+            "xiangYue": "象曰",
+            "yaoCi": "爻辞"
+        }
+    },
+    "guaAIStage": {
+        "title": "推演",
+        "initial": {
+            "quote": "“大衍之数五十，其用四十有九”",
+            "button": "洞见天机"
+        },
+        "loading": "正在为您推演...",
+        "errors": {
+            "parseFailed": "解析失败",
+            "serviceUnavailable": "AI 服务暂时不可用"
+        },
+        "footer": {
+            "quote": "「 变动不居，周流六虚，唯变所适 」",
+            "source": "— 《易·系辞》"
+        }
+    },
+    "toolBox": {
+        "title": "留影",
+        "saveImage": "保存图像",
+        "share": "快捷分享",
+        "copy": "复制文字",
+        "copySuccess": "文字已复制",
+        "shareSuccess": "分享内容已复制",
+        "saveError": "保存失败，请尝试重新生成",
+        "previewHint": "👇 长按图片即可保存或分享",
+        "filenamePrefix": "问卦",
+        "staticGua": "静卦",
+        "changeGua": "之",
+        "shareTemplate": "我在“问卦”中为【{question}】求得一卦：\n【{benGua}】{zhiGua}\n—— 易数推演，唯变所适。",
+        "copyTemplate": "问卜：{question}\n结果：{benGua}\n—— 易数推演。"
+    },
+    "footer": {
+        "title": "易经 · 六爻占卜",
+        "disclaimer": "仅供娱乐 · 切莫当真",
+        "copyright": "© {year} | v{version} ({hash})"
+    }
+}
