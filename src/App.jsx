@@ -42,11 +42,11 @@ function App() {
     status, setStatus, history, setHistory, finalGuaInfo, setFinalGuaInfo,
     isAutoSequence, setIsAutoSequence, currentRecordId, setCurrentRecordId,
     coinRefs, executeRestart, startRound, stopRound, handleCoinFinish
-  } = useDivination(question, yangSetting, selectedMode, (id, nextHistory, finalInfo) => {
-    // 这个回调在 Hook 内部调用，无需 useCallback
+  } = useDivination(question, yangSetting, selectedMode, useCallback((id, nextHistory, finalInfo) => {
+    // 使用 useCallback 包裹，并将 question 作为依赖项
     saveHistoryToLocal({ id, question, history: nextHistory, finalGuaInfo: finalInfo, aiResponse: '' });
     setRefreshCalendar(v => v + 1);
-  });
+  }, [question]));
 
   // 3. 数据初始化（现在已移到外部，useEffect可以移除）
 
@@ -131,10 +131,13 @@ function App() {
     }
   }, [status, selectedMode, setIsAutoSequence, startRound, stopRound]);
 
-  // ================= 重点修改区域结束 =================
-
   return (
-    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-500 pt-4 pb-10">
+    // 优化 1: 从 className 中移除了 "transition-colors duration-500"，这是卡顿的主要原因
+    <div
+      className="min-h-screen w-full bg-slate-50 dark:bg-slate-900 pt-4 pb-10"
+      // 优化 2: 增加 style 属性来开启硬件加速，让滚动更流畅
+      style={{ transform: 'translateZ(0)', WebkitOverflowScrolling: 'touch' }}
+    >
       <div ref={captureRef} className="w-full max-w-md px-4 flex flex-col items-center gap-4 mx-auto relative">
         <Header
           yangSetting={yangSetting}
@@ -158,7 +161,11 @@ function App() {
         />
 
         {isQuestionLocked && (
-          <div className="w-full flex flex-col gap-6 animate-fadeIn">
+          // 优化 3: 为这个即将出现动画的容器添加 will-change 提示
+          <div
+            className="w-full flex flex-col gap-6 animate-fadeIn"
+            style={{ willChange: 'transform, opacity' }}
+          >
             <DivinationStage
               status={status} selectedMode={selectedMode} isAutoSequence={isAutoSequence} historyCount={history.length}
               coinRefs={coinRefs.current}

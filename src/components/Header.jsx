@@ -5,15 +5,15 @@ const Header = ({ yangSetting, toggleYangSetting, disabled, isDarkMode, toggleDa
   const { header } = constants;
 
   return (
-    // 关键修改：将 mb-8 缩小为 mb-2，pb-4 缩小为 pb-1
-    <div className="w-full flex flex-col gap-1 pt-4 pb-1 mb-2 px-1 group relative">
+    // 优化 1: 移除 group，减少样式计算层级
+    <div className="w-full flex flex-col gap-1 pt-4 pb-1 mb-2 px-1 relative">
 
-      {/* 顶部中央装饰点 */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 opacity-20">
+      {/* 顶部中央装饰点：保持静态，移除不必要的复杂布局 */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 opacity-20 pointer-events-none">
         <div className="flex gap-1.5">
-          <div className="w-1 h-1 rounded-full bg-slate-400 dark:bg-slate-500"></div>
+          <div className="w-1 h-1 rounded-full bg-slate-400"></div>
           <div className="w-4 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></div>
-          <div className="w-1 h-1 rounded-full bg-slate-400 dark:bg-slate-500"></div>
+          <div className="w-1 h-1 rounded-full bg-slate-400"></div>
         </div>
       </div>
 
@@ -25,23 +25,31 @@ const Header = ({ yangSetting, toggleYangSetting, disabled, isDarkMode, toggleDa
           </span>
           <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter flex items-center gap-2">
             {header.title}
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.6)]"></span>
+            {/* 优化 2: 移除 animate-pulse 和自定义 shadow，改用静态圆点 */}
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-sm"></span>
           </h1>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* 阴阳设定 */}
+          {/* 阴阳设定按钮 */}
           <button
             onClick={toggleYangSetting}
             disabled={disabled}
             className={`
-              relative h-9 px-4 rounded-xl border transition-all duration-300 flex items-center gap-2 overflow-hidden
+              relative h-9 px-4 rounded-xl border flex items-center gap-2 overflow-hidden
+              active:scale-95 
+              /* 优化 3: 将 transition-all 细化为具体属性 */
+              transition-[background-color,border-color,opacity] duration-300
               ${disabled
                 ? 'opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900'
-                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm hover:border-indigo-400 dark:hover:border-indigo-500 active:scale-95'}
+                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm'}
             `}
           >
-            <div className={`w-2 h-2 rounded-full shadow-sm transition-colors duration-500 ${yangSetting === 'heads' ? 'bg-indigo-500 shadow-indigo-200' : 'bg-orange-500 shadow-orange-200'}`}></div>
+            {/* 内部圆点：仅对颜色进行过渡 */}
+            <div className={`
+              w-2.5 h-2.5 rounded-full transition-colors duration-500
+              ${yangSetting === 'heads' ? 'bg-indigo-500' : 'bg-orange-500'}
+            `}></div>
             <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap tracking-wide">
               {yangSetting === 'heads' ? header.yangHeads : header.yangTails}
             </span>
@@ -50,18 +58,19 @@ const Header = ({ yangSetting, toggleYangSetting, disabled, isDarkMode, toggleDa
           {/* 暗色模式切换 */}
           <button
             onClick={toggleDarkMode}
-            className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-yellow-400 border border-transparent dark:border-slate-700 transition-all active:scale-90"
+            className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-yellow-400 border border-transparent dark:border-slate-700 active:scale-90 transition-transform"
             aria-label={header.themeToggle}
           >
-            <span className="text-lg">{isDarkMode ? '🌙' : '☀️'}</span>
+            <span className="text-lg leading-none">{isDarkMode ? '🌙' : '☀️'}</span>
           </button>
         </div>
       </div>
 
-      {/* 底部装饰线：mt-3 确保它紧贴标题 */}
+      {/* 底部装饰线：使用 will-change-transform 优化渲染（可选） */}
       <div className="w-full h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent mt-3 opacity-50"></div>
     </div>
   );
 };
 
+// 使用 React.memo 确保只有 props 变化时才重新渲染
 export default React.memo(Header);

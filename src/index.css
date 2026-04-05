@@ -2,12 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 基础全局设置 */
-html, body {
-  margin: 0;
-  padding: 0;
-  /* 这一行确保浏览器拉动时不会露出白色 */
-  @apply bg-slate-50 dark:bg-slate-900;
+/* 优化滚动流畅度 */
+html,
+body {
+  -webkit-overflow-scrolling: touch;
+  /* 惯性滚动 */
+  scroll-behavior: smooth;
+  overscroll-behavior-y: none;
+  /* 防止下拉刷新导致的白屏感 */
+}
+
+/* 针对移动端，减少高斯模糊的模糊半径，默认 10px 可能太卡 */
+.backdrop-blur-md {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* 强制开启硬件加速的类 */
+.gpu-accelerate {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000;
 }
 
 body {
@@ -37,8 +52,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  
-  background: transparent !important; /* 强制透明，防止被其他样式覆盖 */
+
+  background: transparent !important;
+  /* 强制透明，防止被其他样式覆盖 */
   border: none !important;
   box-shadow: none !important;
   border-radius: 50%;
@@ -52,19 +68,19 @@ body {
   width: 100%;
   height: 100%;
   /* 如果 SVG 边缘有白边，尝试使用 cover 撑满容器，或者保持 contain */
-  object-fit: contain; 
+  object-fit: contain;
   display: block;
   /* 去掉阴影，防止暗色模式下边缘模糊产生“光圈”感 */
-  filter: none; 
+  filter: none;
 }
 
 /* 5. 解决暗色模式下可能的“白边”渲染问题 */
 .dark .coin-face img {
   /* 如果 SVG 边缘依然有细微白边，可以尝试轻微缩小（可选） */
   /* transform: scale(1.01); */
-  
+
   /* 或者增加一个极小的对比度滤镜来压制边缘杂色 */
-  filter: brightness(0.95); 
+  filter: brightness(0.95);
 }
 
 .coin-front {
@@ -79,8 +95,15 @@ body {
 
 /* 历史记录动画 */
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .history-item-new {
@@ -93,13 +116,25 @@ body {
 }
 
 @keyframes scaleUp {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .animate-scaleUp {
@@ -112,10 +147,14 @@ body {
 
 /* 截图专用保护样式 */
 .is-printing button {
-  transform: none !important; /* 强制取消缩放 */
-  transition: none !important; /* 取消过渡动画 */
-  box-shadow: none !important; /* 取消投影，防止边缘模糊 */
-  background-color: transparent !important; /* 保持底色纯净 */
+  transform: none !important;
+  /* 强制取消缩放 */
+  transition: none !important;
+  /* 取消过渡动画 */
+  box-shadow: none !important;
+  /* 取消投影，防止边缘模糊 */
+  background-color: transparent !important;
+  /* 保持底色纯净 */
 }
 
 .is-printing * {
@@ -123,5 +162,6 @@ body {
   animation: none !important;
   outline: none !important;
   -webkit-tap-highlight-color: transparent !important;
-  box-shadow: none !important; /* 如果不需要阴影，可加上这句消除阴影导致的虚边 */
+  box-shadow: none !important;
+  /* 如果不需要阴影，可加上这句消除阴影导致的虚边 */
 }

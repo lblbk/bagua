@@ -1,6 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { calculateYao, calculateFinalHexagram } from '../utils/divination';
-import { saveHistoryToLocal } from '../utils/storage';
 
 export function useDivination(question, yangSetting, selectedMode, onFinishAll) {
     const [status, setStatus] = useState('idle'); // idle, spinning, stopping, finished
@@ -14,12 +13,24 @@ export function useDivination(question, yangSetting, selectedMode, onFinishAll) 
     const completedCount = useRef(0);
     const roundCounter = useRef(1);
     const timerRef = useRef(null);
+
+    // 【关键恢复】：保留你的正确写法，这是硬币能够绑定实例并旋转的核心！
     const coinRefs = useRef([React.createRef(), React.createRef(), React.createRef()]);
+
+    // 新增：用于记录已经处理过的历史记录长度，防止重复触发保存
+    const processedLengthRef = useRef(0);
+
+    // 新增：缓存外部传入的 onFinishAll 方法
+    const onFinishAllRef = useRef(onFinishAll);
+    useEffect(() => {
+        onFinishAllRef.current = onFinishAll;
+    }, [onFinishAll]);
 
     const executeRestart = useCallback((clearHistory = true) => {
         clearTimeout(timerRef.current);
         setStatus('idle');
         setIsAutoSequence(false);
+        processedLengthRef.current = 0; // 重置已处理的历史长度记录
         if (clearHistory) {
             setHistory([]);
             setFinalGuaInfo(null);
@@ -34,7 +45,6 @@ export function useDivination(question, yangSetting, selectedMode, onFinishAll) 
         completedCount.current = 0;
         activeRoundId.current = Date.now();
 
-        // 【修复 2】因为数组里是 Ref 对象，所以是 ref.current?.startSpin
         coinRefs.current.forEach(ref => {
             if (ref.current) {
                 ref.current.startSpin(activeRoundId.current);
@@ -50,7 +60,6 @@ export function useDivination(question, yangSetting, selectedMode, onFinishAll) 
     const stopRound = useCallback((quick = false) => {
         clearTimeout(timerRef.current);
         setStatus('stopping');
-        // 【修复 3】同理，ref.current?.stopSpin
         coinRefs.current.forEach(ref => {
             if (ref.current) {
                 ref.current.stopSpin(quick);
@@ -73,27 +82,42 @@ export function useDivination(question, yangSetting, selectedMode, onFinishAll) 
                 guaColor: info.color
             };
 
-            setHistory(prev => {
-                const next = [newRecord, ...prev];
-                if (next.length >= 6) {
-                    setStatus('finished');
-                    setIsAutoSequence(false);
-                    const finalInfo = calculateFinalHexagram(next);
-                    setFinalGuaInfo(finalInfo);
-
-                    const recordId = Date.now();
-                    setCurrentRecordId(recordId);
-                    onFinishAll(recordId, next, finalInfo);
-                } else {
-                    setStatus('idle');
-                    if (selectedMode === 'full' && isAutoSequence) {
-                        timerRef.current = setTimeout(startRound, 2000);
-                    }
-                }
-                return next;
-            });
+            // 【彻底解决双重保存 Bug】：状态更新函数内绝不执行带有副作用的操作
+            // React 18 严格模式会把这个函数执行两次，但由于只做纯数组拼接，所以是安全的
+            setHistory(prev => [newRecord, ...prev]);
         }
-    }, [yangSetting, selectedMode, isAutoSequence, startRound, onFinishAll]);
+    }, [yangSetting]);
+
+    // 【核心调度逻辑】：监听 history 的变化，决定下一步该干嘛
+    useEffect(() => {
+        // 如果数组长度没有真正变化（防止无关重绘触发），或者是空的，直接跳过
+        if (history.length === processedLengthRef.current || history.length === 0) return;
+
+        // 标记这个长度已经被处理过了
+        processedLengthRef.current = history.length;
+
+        if (history.length === 6) {
+            // 六爻已满，计算终卦并保存
+            setStatus('finished');
+            setIsAutoSequence(false);
+            const finalInfo = calculateFinalHexagram(history);
+            setFinalGuaInfo(finalInfo);
+
+            const recordId = Date.now();
+            setCurrentRecordId(recordId);
+
+            // 触发存 LocalStorage（彻底杜绝一瞬间存两遍的问题）
+            if (onFinishAllRef.current) {
+                onFinishAllRef.current(recordId, history, finalInfo);
+            }
+        } else if (history.length < 6) {
+            // 未满六爻，进入空闲或自动触发下一轮
+            setStatus('idle');
+            if (selectedMode === 'full' && isAutoSequence) {
+                timerRef.current = setTimeout(startRound, 2000);
+            }
+        }
+    }, [history, selectedMode, isAutoSequence, startRound]);
 
     return {
         status, setStatus,

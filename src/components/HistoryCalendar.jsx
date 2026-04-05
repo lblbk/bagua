@@ -1,46 +1,45 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { getHistoryLogs, deleteHistoryRecord, clearAllHistory } from '../utils/storage';
 import constants from '../data/constants.json';
 
 const HistoryCalendar = ({ onSelectRecord, refreshTrigger }) => {
     const [logs, setLogs] = useState({});
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    // 性能优化：初始值只计算一次
+    const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [isExpanded, setIsExpanded] = useState(false);
 
     const { historyCalendar } = constants;
 
-    // 内部刷新逻辑：确保本地操作后 UI 立即更新
-    const refreshData = () => {
+    // 性能优化：使用 useCallback 稳定函数引用
+    const refreshData = useCallback(() => {
         const currentLogs = getHistoryLogs();
         setLogs(currentLogs);
-    };
+    }, []);
 
     // 监听外部刷新（比如起卦完成后）
     useEffect(() => {
         refreshData();
-    }, [refreshTrigger]);
+    }, [refreshTrigger, refreshData]);
 
-    // 处理单条删除
-    const handleDeleteOne = (e, id) => {
+    // 修改：处理单条删除（移除确认框）
+    const handleDeleteOne = useCallback((e, id) => {
         e.preventDefault();
-        e.stopPropagation(); // 核心：阻止触发父级的 onSelectRecord
-        if (window.confirm("确定删除这条记录吗？")) {
-            deleteHistoryRecord(id);
-            refreshData();
-        }
-    };
+        e.stopPropagation();
+        deleteHistoryRecord(id);
+        refreshData();
+    }, [refreshData]);
 
-    // 处理清空全部
-    const handleClearAll = (e) => {
+    // 处理清空全部（保留确认框）
+    const handleClearAll = useCallback((e) => {
         e.preventDefault();
-        e.stopPropagation(); // 核心：阻止触发标题栏的折叠切换
+        e.stopPropagation();
         if (window.confirm("确定要清空所有历史记录吗？")) {
             clearAllHistory();
             refreshData();
         }
-    };
+    }, [refreshData]);
 
-    // 生成周历逻辑
+    // 生成周历逻辑（保持 useMemo）
     const currentWeekDays = useMemo(() => {
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
@@ -76,7 +75,7 @@ const HistoryCalendar = ({ onSelectRecord, refreshTrigger }) => {
                     {historyCalendar.title}
                 </h3>
 
-                {/* 清空按钮 */}
+                {/* 清空按钮 - 只有全部清空才需要确认 */}
                 {isExpanded && Object.keys(logs).length > 0 && (
                     <button
                         onClick={handleClearAll}
@@ -120,7 +119,7 @@ const HistoryCalendar = ({ onSelectRecord, refreshTrigger }) => {
                                     key={rec.id || rec.timestamp}
                                     className="relative group rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-slate-100 dark:border-slate-800"
                                 >
-                                    {/* 【底层】垃圾桶按钮：z-20，滑入后处于最上方 */}
+                                    {/* 【底层】垃圾桶按钮：单条删除已取消确认框 */}
                                     <button
                                         onClick={(e) => handleDeleteOne(e, rec.id)}
                                         className="absolute right-0 top-0 bottom-0 w-14 bg-red-500 text-white flex items-center justify-center translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out z-20 active:bg-red-600"
@@ -130,12 +129,11 @@ const HistoryCalendar = ({ onSelectRecord, refreshTrigger }) => {
                                         </svg>
                                     </button>
 
-                                    {/* 【内容层】z-10 */}
+                                    {/* 【内容层】 */}
                                     <div
                                         onClick={() => { onSelectRecord(rec); setIsExpanded(false); }}
                                         className="relative p-4 flex items-center justify-between gap-4 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800/60 dark:to-slate-800/90 cursor-pointer z-10 transition-all duration-300"
                                     >
-                                        {/* 左侧锚定内容 */}
                                         <div className="flex-1 min-w-0 flex flex-col gap-1">
                                             <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
                                                 {new Date(rec.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -145,7 +143,6 @@ const HistoryCalendar = ({ onSelectRecord, refreshTrigger }) => {
                                             </p>
                                         </div>
 
-                                        {/* 右侧偏移内容：Hover时向左躲闪腾位 */}
                                         <div className="flex items-center gap-3 transition-transform duration-300 group-hover:-translate-x-12">
                                             {rec.aiResponse ? (
                                                 <span className="shrink-0 text-[9px] px-1.5 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 rounded-md font-bold">
@@ -162,7 +159,7 @@ const HistoryCalendar = ({ onSelectRecord, refreshTrigger }) => {
                                         </div>
                                     </div>
 
-                                    {/* 右侧淡出遮罩：提升文字进入垃圾桶区域时的视觉过渡 */}
+                                    {/* 右侧淡出遮罩 */}
                                     <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white dark:from-slate-800 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[15]" />
                                 </div>
                             ))
