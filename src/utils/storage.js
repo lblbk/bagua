@@ -62,9 +62,18 @@ export const saveHistoryToLocal = (record) => {
     }
 };
 
-/**
- * 清除所有记录（可选功能）
- */
+// 删除单条记录
+export const deleteHistoryRecord = (id) => {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    // 遍历所有日期的数组，过滤掉匹配 ID 的那一项
+    Object.keys(data).forEach(date => {
+        data[date] = data[date].filter(item => item.id !== id);
+        if (data[date].length === 0) delete data[date]; // 如果该日记录删完了，删除日期键
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+};
+
+// 全部清空
 export const clearAllHistory = () => {
     localStorage.removeItem(STORAGE_KEY);
 };
