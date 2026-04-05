@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { getHexagramDetailByName } from './data/hexagramDict';
 import { saveHistoryToLocal } from './utils/storage';
+import { getShareRecord } from './utils/api';
 
 // Hooks
 import { useTheme } from './hooks/useTheme';
@@ -28,6 +29,7 @@ function App() {
   const [aiResponse, setAiResponse] = useState('');
   const [selectedMode, setSelectedMode] = useState('full');
   const [yangSetting, setYangSetting] = useState('heads');
+  const isLoadingHistory = useRef(false);
 
   const captureRef = useRef(null);
   const { isDarkMode, toggleDarkMode } = useTheme();
@@ -38,6 +40,7 @@ function App() {
     isAutoSequence, setIsAutoSequence, currentRecordId, setCurrentRecordId,
     coinRefs, executeRestart, startRound, stopRound, handleCoinFinish
   } = useDivination(question, yangSetting, selectedMode, useCallback((id, nextHistory, finalInfo) => {
+    if (isLoadingHistory.current) return;
     // 使用 useCallback 包裹，并将 question 作为依赖项
     saveHistoryToLocal({ id, question, history: nextHistory, finalGuaInfo: finalInfo, aiResponse: '' });
     setRefreshCalendar(v => v + 1);
@@ -65,8 +68,9 @@ function App() {
   }, [status]);
 
   const loadPastRecord = useCallback((record) => {
+    isLoadingHistory.current = true;
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    executeRestart(true);
+    executeRestart(false);
     setQuestion(record.question);
     setIsQuestionLocked(true);
     setHistory(record.history);
@@ -74,7 +78,37 @@ function App() {
     setAiResponse(record.aiResponse || '');
     setCurrentRecordId(record.id);
     setStatus('finished');
+    setTimeout(() => {
+      isLoadingHistory.current = false;
+    }, 100);
   }, [executeRestart, setHistory, setFinalGuaInfo, setCurrentRecordId, setStatus]);
+
+  useEffect(() => {
+    const checkShareLink = async () => {
+      // 1. 解析 URL 参数
+      const params = new URLSearchParams(window.location.search);
+      const shareId = params.get('share');
+
+      // 2. 如果没有 share 参数，直接返回，什么都不做
+      if (!shareId) return;
+
+      // 3. 调用 API 去服务器取数据
+      const record = await getShareRecord(shareId);
+
+      if (record) {
+        // 4. 调用你现有的 loadPastRecord 函数，把数据填进去
+        // 这个函数会自动设置 question, history, finalGuaInfo, status='finished' 等
+        loadPastRecord(record);
+
+        // 5. 可选：为了美观，加载完后把 URL 里的参数去掉，让地址栏变干净
+        // window.history.replaceState({}, '', window.location.pathname);
+      } else {
+        console.error("未能加载分享内容");
+      }
+    };
+
+    checkShareLink();
+  }, [loadPastRecord]);
 
   const handleSaveAfterAI = useCallback((finalAiText) => {
     setAiResponse(finalAiText);
@@ -179,7 +213,13 @@ function App() {
                   finalGuaInfo={finalGuaInfo} question={question}
                   savedResponse={aiResponse} onSaveRecord={handleSaveAfterAI}
                 />
-                <ToolBox finalGuaInfo={finalGuaInfo} question={question} targetRef={captureRef} />
+                <ToolBox
+                  finalGuaInfo={finalGuaInfo}
+                  question={question}
+                  targetRef={captureRef}
+                  history={history}
+                  aiResponse={aiResponse}
+                />
               </>
             )}
           </div>

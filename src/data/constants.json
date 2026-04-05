@@ -120,13 +120,15 @@
         "copy": "复制文字",
         "copySuccess": "文字已复制",
         "shareSuccess": "分享内容已复制",
+        "shareError": "创建分享链接失败，请检查网络后重试。",
         "saveError": "保存失败，请尝试重新生成",
         "previewHint": "👇 长按图片即可保存或分享",
         "filenamePrefix": "问卦",
         "staticGua": "静卦",
         "changeGua": "之",
         "shareTemplate": "我在“问卦”中为【{question}】求得一卦：\n【{benGua}】{zhiGua}\n—— 易数推演，唯变所适。",
-        "copyTemplate": "问卜：{question}\n结果：{benGua}\n—— 易数推演。"
+        "copyTemplate": "问卜：{question}\n结果：{benGua}\n—— 易数推演。",
+        "shareLinkCopied": "分享链接已复制，快去发送给朋友吧！"
     },
     "footer": {
         "title": "易经 · 六爻占卜",

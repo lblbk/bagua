@@ -1,203 +1,153 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom'; // 必须引入
 import { toPng } from 'html-to-image';
-import constants from '../data/constants.json';
+import { createShareRecord } from '../utils/api';
 
-// 1. 将工具函数移出组件，避免重复创建
-const formatTemplate = (template, data) => {
-  return template.replace(/{(\w+)}/g, (match, key) => data[key] || "");
+// --- 独立的 Toast 组件，通过 Portal 渲染到 Body ---
+const GlobalToast = ({ message, isLoading }) => {
+  return createPortal(
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 999999,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      pointerEvents: 'none'
+    }}>
+      <div style={{
+        backgroundColor: 'rgba(30, 41, 59, 0.95)',
+        color: 'white',
+        padding: '16px 24px',
+        borderRadius: '16px',
+        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '12px',
+        pointerEvents: 'auto',
+        border: '1px solid rgba(255,255,255,0.1)',
+        minWidth: '200px',
+        animation: 'toastIn 0.3s ease-out'
+      }}>
+        {isLoading && (
+          <div style={{
+            width: '24px',
+            height: '24px',
+            border: '3px solid rgba(255,255,255,0.3)',
+            borderTopColor: '#10b981',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite'
+          }} />
+        )}
+        <span style={{ fontSize: '15px', fontWeight: 'bold', textAlign: 'center' }}>{message}</span>
+      </div>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes toastIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+    </div>,
+    document.body // 强制传送到 body 根节点
+  );
 };
 
-const getTimestampStrings = () => {
-  const now = new Date();
-  const dateStr = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
-  const timeStr = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
-  return { dateStr, timeStr };
-};
-
-const ToolBox = ({ finalGuaInfo, question, targetRef }) => {
-  const { toolBox } = constants;
-  const [isGenerating, setIsGenerating] = useState(false);
+const ToolBox = ({ finalGuaInfo, question, targetRef, history, aiResponse }) => {
+  const [toast, setToast] = useState({ show: false, msg: '', loading: false });
   const [previewImage, setPreviewImage] = useState(null);
 
-  // 2. 使用 useCallback 缓存函数，配合 React.memo 防止子组件/自身无效重绘
-  const saveAsImage = useCallback(async () => {
-    const node = targetRef.current;
-    if (!node || isGenerating) return;
-
-    // 收起键盘，防止 H5 截图位移
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
+  // 控制 Toast 消失
+  useEffect(() => {
+    if (toast.show && !toast.loading) {
+      const timer = setTimeout(() => setToast({ show: false, msg: '', loading: false }), 3000);
+      return () => clearTimeout(timer);
     }
+  }, [toast]);
 
-    setIsGenerating(true);
-    node.classList.add('is-printing');
-
+  const copyToClipboard = async (text) => {
     try {
-      const isDark = document.documentElement.classList.contains('dark');
-      // 给 DOM 留出渲染 class 改变的时间
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      const width = node.offsetWidth;
-      const height = node.scrollHeight;
-      const scale = Math.min(window.devicePixelRatio || 2, 2); // 限制最大倍率为2，平衡清晰度与性能
-
-      const options = {
-        width,
-        height,
-        canvasWidth: width * scale,
-        canvasHeight: height * scale,
-        pixelRatio: scale,
-        backgroundColor: isDark ? '#0f172a' : '#f8fafc',
-        cacheBust: true,
-        style: {
-          margin: '0', padding: '0', transform: 'none',
-        }
-      };
-
-      // iOS 预热处理
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (isIOS) await toPng(node, options);
-
-      const dataUrl = await toPng(node, options);
-      const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-      if (isMobile) {
-        setPreviewImage(dataUrl);
-      } else {
-        const { dateStr, timeStr } = getTimestampStrings();
-        const benName = finalGuaInfo.benGua.name;
-        const zhiName = finalGuaInfo.zhiGua ? `${toolBox.changeGua}${finalGuaInfo.zhiGua.name}` : toolBox.staticGua;
-
-        const link = document.createElement('a');
-        link.download = `${toolBox.filenamePrefix}_${benName}${zhiName}_${dateStr}_${timeStr}.png`;
-        link.href = dataUrl;
-        link.click();
-      }
+      await navigator.clipboard.writeText(text);
+      return true;
     } catch (err) {
-      console.error("保存失败:", err);
-      // 在 H5 环境，alert 可能会阻塞 UI，生产环境建议换成 Toast 组件
-      alert(toolBox.saveError);
-    } finally {
-      node.classList.remove('is-printing');
-      setIsGenerating(false);
-    }
-  }, [finalGuaInfo, isGenerating, targetRef, toolBox]);
-
-  const copyToClipboard = useCallback((customText, msg) => {
-    const text = customText || formatTemplate(toolBox.copyTemplate, {
-      question: question || '综合运势',
-      benGua: finalGuaInfo.benGua.commonName
-    });
-
-    // 现代 API 优先
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(() => {
-        alert(msg || toolBox.copySuccess);
-      });
-    } else {
-      // 降级处理
       const textArea = document.createElement("textarea");
       textArea.value = text;
       document.body.appendChild(textArea);
       textArea.select();
       document.execCommand('copy');
       document.body.removeChild(textArea);
-      alert(msg || toolBox.copySuccess);
+      return true;
     }
-  }, [finalGuaInfo, question, toolBox]);
+  };
 
   const handleShare = useCallback(async () => {
-    const text = formatTemplate(toolBox.shareTemplate, {
-      question: question || '综合运势',
-      benGua: finalGuaInfo.benGua.commonName,
-      zhiGua: finalGuaInfo.zhiGua ? ` ${toolBox.changeGua} ` + finalGuaInfo.zhiGua.commonName : ''
-    });
+    // 1. 立即弹出正在处理
+    setToast({ show: true, msg: '正在生成专属分享链接...', loading: true });
 
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: toolBox.title, text, url: window.location.href });
-      } catch (err) { /* 用户取消不处理 */ }
-    } else {
-      copyToClipboard(text, toolBox.shareSuccess);
+    try {
+      const shareData = { question, history, finalGuaInfo, aiResponse: aiResponse || '' };
+      const hashId = await createShareRecord(shareData);
+
+      if (!hashId) throw new Error("服务器返回空");
+
+      const shareUrl = `${window.location.origin}/?share=${hashId}`;
+
+      // 2. 核心修改：不再强行调用 navigator.share (因为它在异步中必崩)
+      // 改为自动复制链接
+      await copyToClipboard(shareUrl);
+
+      // 3. 成功后更新 Toast 状态
+      setToast({ show: true, msg: '✅ 分享链接已复制到剪贴板，快去粘贴给好友吧！', loading: false });
+
+    } catch (err) {
+      console.error("分享出错:", err);
+      setToast({ show: true, msg: '❌ 分享失败，请重试', loading: false });
     }
-  }, [finalGuaInfo, question, toolBox, copyToClipboard]);
+  }, [question, history, finalGuaInfo, aiResponse]);
+
+  const handleSaveImage = async () => {
+    setToast({ show: true, msg: '正在生成长图...', loading: true });
+    try {
+      const dataUrl = await toPng(targetRef.current, { cacheBust: true, pixelRatio: 2 });
+      setPreviewImage(dataUrl);
+      setToast({ show: false, msg: '', loading: false });
+    } catch (e) {
+      setToast({ show: true, msg: '❌ 生成图片失败', loading: false });
+    }
+  };
 
   return (
-    <>
-      {/* 3. 优化点：移除 transition-all，改为具体的属性以提升滑动性能 */}
-      <div className="toolbox-container w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-2xl shadow-lg border border-white/50 dark:border-slate-800 p-4 transition-opacity duration-300">
+    <div className="w-full bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-xl mt-6 border border-slate-100 dark:border-slate-700">
+      <div className="grid grid-cols-3 gap-4">
+        <button onClick={handleSaveImage} className="flex flex-col items-center gap-2">
+          <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-2xl">🖼️</div>
+          <span className="text-xs font-bold text-slate-500">保存图片</span>
+        </button>
 
-        <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 dark:border-slate-800 px-1">
-          <h3 className="text-slate-700 dark:text-slate-300 font-black text-lg tracking-widest">
-            {toolBox.title}
-          </h3>
-        </div>
+        <button onClick={handleShare} className="flex flex-col items-center gap-2">
+          <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-2xl">🔗</div>
+          <span className="text-xs font-bold text-slate-500">一键分享</span>
+        </button>
 
-        <div className="grid grid-cols-3 gap-2">
-          {/* 保存图片 */}
-          <button
-            onClick={saveAsImage}
-            disabled={isGenerating}
-            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-transform group"
-          >
-            <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/20 rounded-full flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-              {isGenerating ? <span className="animate-spin text-base">⌛</span> : <span>🖼️</span>}
-            </div>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">{toolBox.saveImage}</span>
-          </button>
-
-          {/* 快捷分享 */}
-          <button
-            onClick={handleShare}
-            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-transform group"
-          >
-            <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-900/20 rounded-full flex items-center justify-center text-xl group-hover:scale-110 transition-transform text-emerald-600">
-              🔗
-            </div>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">{toolBox.share}</span>
-          </button>
-
-          {/* 复制文字 */}
-          <button
-            onClick={() => copyToClipboard(null, toolBox.copySuccess)}
-            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-transform group"
-          >
-            <div className="w-10 h-10 bg-amber-50 dark:bg-amber-900/20 rounded-full flex items-center justify-center text-xl group-hover:scale-110 transition-transform text-amber-600">
-              📋
-            </div>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">{toolBox.copy}</span>
-          </button>
-        </div>
+        <button onClick={() => {
+          copyToClipboard(`卦象：${finalGuaInfo.benGua.commonName}`).then(() =>
+            setToast({ show: true, msg: '✅ 卦辞已复制', loading: false })
+          );
+        }} className="flex flex-col items-center gap-2">
+          <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/30 rounded-full flex items-center justify-center text-2xl">📋</div>
+          <span className="text-xs font-bold text-slate-500">复制文字</span>
+        </button>
       </div>
 
-      {/* 预览图 Modal 优化：添加 GPU 加速属性 */}
+      {/* --- 全局提示：Portal 渲染 --- */}
+      {toast.show && <GlobalToast message={toast.msg} isLoading={toast.loading} />}
+
+      {/* 图片预览 Modal */}
       {previewImage && (
-        <div
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fadeIn"
-          style={{ willChange: 'opacity' }}
-        >
-          <div className="bg-white/20 text-white text-sm px-6 py-2 rounded-full mb-6 flex items-center gap-2 shadow-lg">
-            {toolBox.previewHint}
-          </div>
-
-          <div className="relative w-full max-w-md max-h-[70vh] overflow-y-auto rounded-xl shadow-2xl border border-white/10"
-            style={{ WebkitOverflowScrolling: 'touch' }}>
-            <img
-              src={previewImage}
-              alt="Result"
-              className="w-full h-auto block rounded-xl pointer-events-auto"
-            />
-          </div>
-
-          <button
-            onClick={() => setPreviewImage(null)}
-            className="mt-8 w-12 h-12 bg-white/20 active:bg-white/40 text-white rounded-full flex items-center justify-center text-2xl transition-colors backdrop-blur-lg"
-          >
-            ✕
-          </button>
+        <div className="fixed inset-0 z-[99999] bg-black/95 p-4 flex flex-col items-center justify-center">
+          <img src={previewImage} className="max-w-full max-h-[80vh] rounded-xl shadow-2xl" />
+          <button onClick={() => setPreviewImage(null)} className="mt-8 bg-white text-black px-10 py-3 rounded-full font-bold">关闭预览</button>
         </div>
       )}
-    </>
+    </div>
   );
 };
 
