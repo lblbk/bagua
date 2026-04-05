@@ -3,47 +3,93 @@ import aiConfig from '../data/aiConfig.json';
 /**
  * 构建精细化的占卜 Prompt
  */
-export const generateDivinationPrompt = ({ question, finalGuaInfo, benDetail, zhiDetail, history }) => {
-  // 1. 获取变爻索引 (history 是 [上爻...初爻]，需反转匹配明细中的 [初...上])
-  const sortedHistory = [...history].reverse();
-  const movingLines = sortedHistory
-    .map((line, index) => (line.guaMark ? { index: index + 1, line } : null))
-    .filter(Boolean);
+export const generateDivinationPrompt = ({
+    question, finalGuaInfo, benDetail, zhiDetail, history,
+    previousRecord, prevBenDetail, prevZhiDetail, currentTimeContext
+}) => {
 
-  // 2. 构建变爻描述
-  const movingLinesDetail = movingLines.map(m => {
-    const benYao = benDetail?.yaoCi[m.index - 1];
-    const zhiYao = zhiDetail?.yaoCi[m.index - 1];
-    return `第${m.index}爻变动：
+    // 1. 解析本次变爻
+    const sortedHistory = [...history].reverse();
+    const movingLines = sortedHistory
+        .map((line, index) => (line.guaMark ? { index: index + 1, line } : null))
+        .filter(Boolean);
+
+    const movingLinesDetail = movingLines.map(m => {
+        const benYao = benDetail?.yaoCi[m.index - 1];
+        const zhiYao = zhiDetail?.yaoCi[m.index - 1];
+        return `第${m.index}爻变：
     - 本卦爻辞：${benYao?.label} ${benYao?.content}
-    - 之卦对应：${zhiYao?.label} ${zhiYao?.content}`;
-  }).join('\n');
+    - 之卦爻辞：${zhiYao?.label} ${zhiYao?.content}`;
+    }).join('\n');
 
-  // 3. 组合最终 Prompt
-  return `
-# 易经六爻解卦请求
+    // ================= 历史卦象详细拼接 =================
+    let previousGuaSection = "";
+    let relationInstruction = "请结合当前节气时令，对本次卦象进行综合分析并给出建议。";
 
-## 占卜上下文
+    if (previousRecord && previousRecord.finalGuaInfo) {
+        const prevBenName = previousRecord.finalGuaInfo.benGua?.name || "未知";
+        const prevZhiName = previousRecord.finalGuaInfo.zhiGua?.name || "无";
 
-1. 所求为何
-${question || "未明确具体问题，请进行综合运势分析"}
+        // 解析历史变爻序号与爻辞
+        const prevSortedHistory = [...previousRecord.history].reverse();
+        const prevMovingLines = prevSortedHistory
+            .map((line, index) => (line.guaMark ? { index: index + 1, line } : null))
+            .filter(Boolean);
 
-2. 卦象基本信息
+        let prevMovingText = "此卦为静卦，无变爻。";
+        if (prevMovingLines.length > 0) {
+            prevMovingText = prevMovingLines.map(m => {
+                const pBenYao = prevBenDetail?.yaoCi[m.index - 1];
+                return `第${m.index}爻变 (${pBenYao?.label || ''}：${pBenYao?.content || '未知'})`;
+            }).join('\n    ');
+        }
+
+        previousGuaSection = `
+## 历史占卜
+- 【本卦】：${prevBenName}
+  - 卦辞：${prevBenDetail?.guaCi || "无"}
+  - 象曰：${prevBenDetail?.xiangYue || "无"}
+- 【之卦】：${prevZhiName}
+  - 卦辞：${prevZhiDetail?.guaCi || "无"}
+  - 象曰：${prevZhiDetail?.xiangYue || "无"}
+- 【变爻】：
+    ${prevMovingText}
+`;
+        // 动态调整分析指令
+        relationInstruction = "由于用户对同一问题有过历史占卜，请结合当前的“起卦时间（时令旺衰）”与“上次占卜”的结果。对比新旧卦象的演变轨迹（如境遇是否好转、阻力是否增加、核心矛盾是否转移），进行多维度的综合推演，并给出针对性建议。";
+    }
+
+    // ================= 最终 Prompt 组装 =================
+    return `
+# 金钱摇卦
+
+## 所求为何
+- ${question || "未明确具体问题，请进行综合运势分析"}
+
+## 卜卦详情
+
+1. 起卦时间
+- 时辰与农历：${currentTimeContext || "未知"}
+
+2. 本次卦象信息
 - 【本卦】：${finalGuaInfo.benGua.commonName} (${finalGuaInfo.benGua.name})
   - 卦辞：${benDetail?.guaCi || "无"}
   - 象曰：${benDetail?.xiangYue || "无"}
 - 【之卦】：${finalGuaInfo.zhiGua ? `${finalGuaInfo.zhiGua.commonName} (${finalGuaInfo.zhiGua.name})` : "无变卦 (静卦)"}
   ${finalGuaInfo.zhiGua ? `- 之卦卦辞：${zhiDetail?.guaCi || "无"}` : ""}
+  ${finalGuaInfo.zhiGua ? `- 之卦象曰：${zhiDetail?.xiangYue || "无"}` : ""}
 
-3. 爻位变动分析
+3. 本次爻位变动分析
 ${movingLines.length > 0 ? movingLinesDetail : "此卦为静卦，无变爻，请重点分析本卦卦辞与象曰。"}
+${previousGuaSection}
 
 ## 要求 (严格执行)
 1. **语言风格**：直白易懂，沉稳理性有逻辑，充满理解和共情，像导师一样分析利弊提供方法论。
-2. **结构化输出**：必须严格按照以下 Markdown 格式，且标题后必须带中文冒号“：”。
-3. **字数限制**：总字数严控在 500-550 字之间，言简意赅。
+2. **分析策略**：${relationInstruction} （可适当运用阴阳五行或节气的自然哲学解释）
+3. **结构化输出**：必须严格按照以下 Markdown 格式，且标题后必须带中文冒号“：”。
+4. **字数限制**：总字数严控在 500-600 字之间，言简意赅。
 
-## 3. 回复模板 (请按此结构回复)
+## 回复模板 (请按此结构回复)
 
 **卦意：**
 (此处请用一段话直接阐述该卦对用户问题的核心启示)
@@ -69,11 +115,11 @@ export const fetchAIInterpretation = async (prompt, onChunk, onError) => {
         const response = await fetch(workerUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 prompt: prompt,
                 baseUrl: baseUrl,
                 apiKeyEnv: config.apiKeyEnv,
-                modelId: modelId 
+                modelId: modelId
             })
         });
 
@@ -84,9 +130,7 @@ export const fetchAIInterpretation = async (prompt, onChunk, onError) => {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder("utf-8");
-        
-        // --- 核心改进：残余字符串缓冲区 ---
-        let remainder = ""; 
+        let remainder = "";
 
         while (true) {
             const { done, value } = await reader.read();
@@ -97,7 +141,7 @@ export const fetchAIInterpretation = async (prompt, onChunk, onError) => {
             const lines = chunk.split('\n');
 
             // 最后一行可能是不完整的，存入 remainder 等下次处理
-            remainder = lines.pop(); 
+            remainder = lines.pop();
 
             for (let line of lines) {
                 line = line.trim();

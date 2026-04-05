@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import hexagramsMd from './data/hexagrams.md?raw';
-import { parseHexagramMarkdown } from './utils/ParserMarkdown';
+import { getHexagramDetailByName } from './data/hexagramDict';
 import { saveHistoryToLocal } from './utils/storage';
 
 // Hooks
@@ -20,9 +19,6 @@ import GuaAIStage from './components/GuaAIStage';
 import ToolBox from './components/ToolBox';
 import ConfirmModal from './components/ConfirmModal';
 
-// 在 App 函数外部解析，只执行一次，避免重复计算
-const ALL_HEXAGRAM_DETAILS = parseHexagramMarkdown(hexagramsMd);
-
 function App() {
   // 1. UI 状态
   const [question, setQuestion] = useState('');
@@ -32,7 +28,6 @@ function App() {
   const [aiResponse, setAiResponse] = useState('');
   const [selectedMode, setSelectedMode] = useState('full');
   const [yangSetting, setYangSetting] = useState('heads');
-  // 移除 hexagramDetails state
 
   const captureRef = useRef(null);
   const { isDarkMode, toggleDarkMode } = useTheme();
@@ -53,10 +48,9 @@ function App() {
   // 4. 计算当前卦象详情
   const { currentDetail, zhiDetail } = useMemo(() => {
     if (!finalGuaInfo) return { currentDetail: null, zhiDetail: null };
-    const findD = (name) => ALL_HEXAGRAM_DETAILS.find(d => d.title.includes(name));
     return {
-      currentDetail: findD(finalGuaInfo.benGua.name),
-      zhiDetail: finalGuaInfo.zhiGua ? findD(finalGuaInfo.zhiGua.name) : null
+      currentDetail: getHexagramDetailByName(finalGuaInfo.benGua.name),
+      zhiDetail: finalGuaInfo.zhiGua ? getHexagramDetailByName(finalGuaInfo.zhiGua.name) : null
     };
   }, [finalGuaInfo]);
 
