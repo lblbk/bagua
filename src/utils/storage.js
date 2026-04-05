@@ -1,36 +1,47 @@
 // src/utils/storage.js
 const STORAGE_KEY = 'divination_history_logs';
 
-/**
- * 获取所有历史记录
- * @returns {Object} 键为日期(YYYY-MM-DD)，值为数组
- */
 export const getHistoryLogs = () => {
     try {
         const data = localStorage.getItem(STORAGE_KEY);
         return data ? JSON.parse(data) : {};
     } catch (e) {
-        console.error("读取本地存储失败:", e);
         return {};
     }
 };
 
 /**
- * 保存一条记录到本地
- * @param {Object} record 包含 question, history, finalGuaInfo, aiResponse
+ * 保存或更新记录
+ * @param {Object} record 必须包含 id (timestamp)
  */
 export const saveHistoryToLocal = (record) => {
     try {
         const allLogs = getHistoryLogs();
-        const today = new Date();
-        const dateKey = today.toISOString().split('T')[0];
+        // 使用记录自身的创建日期作为 key，确保回溯更新时能找到正确位置
+        const date = new Date(record.id);
+        const dateKey = date.toISOString().split('T')[0];
 
-        // 1. 插入新数据（每天最多3条）
         if (!allLogs[dateKey]) allLogs[dateKey] = [];
-        allLogs[dateKey].unshift({ ...record, timestamp: Date.now() });
-        allLogs[dateKey] = allLogs[dateKey].slice(0, 3);
 
-        // 2. 清理逻辑：只保留最近 7 天的 Key
+        // 查找是否存在同 ID 记录
+        const existingIndex = allLogs[dateKey].findIndex(item => item.id === record.id);
+
+        if (existingIndex > -1) {
+            // 更新逻辑：合并新旧数据
+            allLogs[dateKey][existingIndex] = {
+                ...allLogs[dateKey][existingIndex],
+                ...record,
+                updatedAt: Date.now()
+            };
+        } else {
+            // 新增逻辑
+            allLogs[dateKey].unshift({ ...record, timestamp: record.id });
+            // 限制每天最多3条（仅在新增时触发限制）
+            allLogs[dateKey] = allLogs[dateKey].slice(0, 3);
+        }
+
+        // 清理逻辑：只保留最近 7 天
+        const today = new Date();
         const validDates = [];
         for (let i = 0; i < 7; i++) {
             const d = new Date();
@@ -39,13 +50,16 @@ export const saveHistoryToLocal = (record) => {
         }
 
         const filteredLogs = {};
-        validDates.forEach(date => {
-            if (allLogs[date]) filteredLogs[date] = allLogs[date];
+        validDates.forEach(dKey => {
+            if (allLogs[dKey]) filteredLogs[dKey] = allLogs[dKey];
         });
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredLogs));
         return filteredLogs;
-    } catch (e) { return {}; }
+    } catch (e) {
+        console.error("Save failed", e);
+        return {};
+    }
 };
 
 /**

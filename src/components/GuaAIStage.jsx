@@ -56,9 +56,6 @@ const QuoteFooter = () => (
   </div>
 );
 
-// ... 前面的 import 保持不变
-
-// 1. 在参数中解构 savedResponse 和 onSaveRecord
 const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question, savedResponse, onSaveRecord }) => {
   const [interp, setInterp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -67,17 +64,22 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question, savedR
 
   const timerRef = useRef(null);
 
-  // 2. 新增：监听 savedResponse。如果是回溯，直接填入内容，不再显示“开始解卦”按钮
+  // 【关键修改 1】：监听 savedResponse
+  // 当从日历选择历史记录时，App.jsx 会改变 savedResponse
   useEffect(() => {
+    // 如果有已保存的 AI 回复，直接显示，停止 loading
     if (savedResponse) {
       setInterp(savedResponse);
       setLoading(false);
+      setError(null);
     } else {
-      // 如果没有已保存的内容（比如新起了一卦），则清空界面
+      // 如果没有（说明是新卦或者还没解卦的历史记录），清空内容，显示解卦按钮
       setInterp("");
+      setLoading(false);
     }
-  }, [savedResponse]);
+  }, [savedResponse]); // 必须依赖 savedResponse
 
+  // 清理定时器
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -109,38 +111,41 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question, savedR
         (chunk) => {
           bufferText += chunk;
         },
-        (err) => setError(err || guaAIStage.errors.parseFailed)
+        (err) => {
+          setError(err || guaAIStage.errors.parseFailed);
+          setLoading(false);
+        }
       );
     } catch (err) {
       setError(guaAIStage.errors.serviceUnavailable);
+      setLoading(false);
     } finally {
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
 
-      // 3. 关键修改：确保最后一点 buffer 也刷入 accumulatedText
+      // 确保最后的 buffer 刷入
       const finalText = accumulatedText + bufferText;
-      setInterp(finalText);
-      setLoading(false);
-
-      // 4. 执行保存：只有在真正请求 AI 成功并得到文本后，才调用 App 传来的保存函数
-      if (finalText && !error) {
+      if (finalText) {
+        setInterp(finalText);
+        // 【关键修改 2】：解卦完成后回调 App.jsx 进行保存/更新
         onSaveRecord(finalText);
       }
+      setLoading(false);
     }
   };
 
   return (
     <div className="w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-3xl shadow-xl border border-white/50 dark:border-slate-800 p-6 overflow-hidden transition-all duration-500">
 
-      {/* 头部标题栏保持不变 */}
+      {/* 头部标题 */}
       <div
         className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-800 pb-2 cursor-pointer group"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
-        <h3 className="text-slate-700 dark:text-slate-300 font-black text-lg tracking-widest flex-1 group-hover:text-indigo-600 transition-colors">
+        <h3 className="text-slate-700 dark:text-slate-300 font-black text-lg tracking-widest flex-1">
           {guaAIStage.title}
         </h3>
         <span className={`text-gray-300 text-[10px] transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
@@ -149,8 +154,9 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question, savedR
       </div>
 
       <div className={`transition-all duration-500 ${isExpanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-        {/* 这里逻辑变为：如果没有内容 且 不在加载中，显示按钮 */}
-        {!interp && !loading ? (
+
+        {/* 逻辑判定：如果没有内容且不在加载，显示按钮；否则显示内容 */}
+        {(!interp && !loading) ? (
           <div className="py-8 text-center flex flex-col items-center">
             <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/20 rounded-full flex items-center justify-center mb-4 text-2xl">
               ✨
@@ -160,37 +166,29 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question, savedR
             </p>
             <button
               onClick={handleInterpret}
-              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all text-sm group relative overflow-hidden"
+              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all text-sm"
             >
-              <span className="relative z-10 flex items-center gap-2 text-base">
-                {guaAIStage.initial.button}
-              </span>
-              <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500 -skew-x-12 -translate-x-full" />
+              {guaAIStage.initial.button}
             </button>
           </div>
         ) : (
           <div className="relative">
             <div className={`p-5 rounded-2xl border transition-colors duration-500 bg-gradient-to-b from-indigo-50/20 to-transparent dark:from-indigo-950/10 ${loading ? 'border-indigo-200 animate-pulse' : 'border-indigo-100 dark:border-slate-800'}`}>
-
               <article className="prose prose-sm max-w-none prose-indigo">
                 <ReactMarkdown components={mdComponents}>
                   {interp}
                 </ReactMarkdown>
-
-                {loading && (
-                  <span className="inline-block w-1 h-3 ml-1 bg-indigo-500/50 animate-bounce align-middle" />
-                )}
+                {loading && <span className="inline-block w-1 h-3 ml-1 bg-indigo-500/50 animate-bounce" />}
               </article>
             </div>
 
             {loading && (
               <div className="flex justify-center items-center gap-2 mt-4 text-[10px] text-indigo-400 italic">
-                <span className="animate-spin text-sm">⚙</span>
-                {guaAIStage.loading}
+                <span className="animate-spin text-sm">⚙</span> {guaAIStage.loading}
               </div>
             )}
 
-            {/* 有内容且不在加载时，显示底部的名言 */}
+            {/* 只有在非加载状态且有内容时显示底部 */}
             {interp && !loading && <QuoteFooter />}
           </div>
         )}

@@ -87,18 +87,22 @@ function App() {
     setHistory(record.history);
     setFinalGuaInfo(record.finalGuaInfo);
     setAiResponse(record.aiResponse || ''); // 恢复保存的 AI 内容
+    setCurrentRecordId(record.id);
     setStatus('finished');
   };
 
   const handleSaveAfterAI = (finalAiText) => {
-    setAiResponse(finalAiText); // 更新当前状态
+    setAiResponse(finalAiText);
+    if (!currentRecordId) return;
+
     saveHistoryToLocal({
-      question: question,
-      history: history,
-      finalGuaInfo: finalGuaInfo,
-      aiResponse: finalAiText // 显式保存 AI 结果
+      id: currentRecordId,
+      question,
+      history,
+      finalGuaInfo,
+      aiResponse: finalAiText
     });
-    setRefreshCalendar(v => v + 1); // 刷新日历标记
+    setRefreshCalendar(v => v + 1);
   };
 
   useEffect(() => {
@@ -119,6 +123,7 @@ function App() {
     setHistory([]);
     setFinalGuaInfo(null);
     setAiResponse(''); // 清空 AI 解读内容
+    setCurrentRecordId(null);
     roundCounter.current = 1;
     setStatus('idle');
     setIsAutoSequence(false);
@@ -163,8 +168,19 @@ function App() {
       if (next.length >= 6) {
         setStatus('finished');
         setIsAutoSequence(false);
-        setFinalGuaInfo(calculateFinalHexagram(next));
-        setAiResponse('');
+        const finalInfo = calculateFinalHexagram(next);
+        setFinalGuaInfo(finalInfo);
+
+        const recordId = Date.now();
+        setCurrentRecordId(recordId);
+        saveHistoryToLocal({
+          id: recordId,
+          question: question,
+          history: next,
+          finalGuaInfo: finalInfo,
+          aiResponse: ''
+        });
+        setRefreshCalendar(v => v + 1);
       } else {
         setStatus('idle');
         if (selectedMode === 'full' && isAutoSequence) timerRef.current = setTimeout(startRound, 2000);
@@ -231,7 +247,15 @@ function App() {
               <>
                 <GuaResultStage history={history} finalGuaInfo={finalGuaInfo} />
                 <GuaDetailStage detail={currentDetail} zhiDetail={zhiDetail} history={history} />
-                <GuaAIStage detail={currentDetail} zhiDetail={zhiDetail} history={history} finalGuaInfo={finalGuaInfo} question={question} savedResponse={aiResponse} onSaveRecord={handleSaveAfterAI} />
+                <GuaAIStage
+                  detail={currentDetail}
+                  zhiDetail={zhiDetail}
+                  history={history}
+                  finalGuaInfo={finalGuaInfo}
+                  question={question}
+                  savedResponse={aiResponse}
+                  onSaveRecord={handleSaveAfterAI}
+                />
                 <ToolBox finalGuaInfo={finalGuaInfo} question={question} targetRef={captureRef} />
               </>
             )}
