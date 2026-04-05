@@ -113,4 +113,4 @@ const GuaResultStage = ({ history, finalGuaInfo }) => {
   );
 };
 
-export default GuaResultStage;
+export default React.memo(GuaResultStage);

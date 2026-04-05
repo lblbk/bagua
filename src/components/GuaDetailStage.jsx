@@ -113,4 +113,4 @@ const GuaDetailStage = ({ detail, zhiDetail, history }) => {
   );
 };
 
-export default GuaDetailStage;
+export default React.memo(GuaDetailStage);

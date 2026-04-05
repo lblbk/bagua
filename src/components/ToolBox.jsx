@@ -178,4 +178,4 @@ const ToolBox = ({ finalGuaInfo, question, targetRef }) => {
   );
 };
 
-export default ToolBox;
+export default React.memo(ToolBox);

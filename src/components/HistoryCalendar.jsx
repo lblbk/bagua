@@ -185,4 +185,4 @@ const HistoryCalendar = ({ onSelectRecord, refreshTrigger }) => {
     );
 };
 
-export default HistoryCalendar;
+export default React.memo(HistoryCalendar);

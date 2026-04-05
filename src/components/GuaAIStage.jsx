@@ -203,4 +203,4 @@ const GuaAIStage = ({ detail, zhiDetail, history, finalGuaInfo, question, savedR
   );
 };
 
-export default GuaAIStage;
+export default React.memo(GuaAIStage);

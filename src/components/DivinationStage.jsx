@@ -87,4 +87,4 @@ const DivinationStage = ({ status, selectedMode, isAutoSequence, historyCount, c
   );
 };
 
-export default DivinationStage;
+export default React.memo(DivinationStage);

@@ -107,4 +107,4 @@ const HistoryList = ({ history, isAutoSequence }) => {
   );
 };
 
-export default HistoryList;
+export default React.memo(HistoryList);

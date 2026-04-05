@@ -120,4 +120,4 @@ const QuestionStage = ({ question, setQuestion, onQuestionSubmit, isLocked, onRe
   );
 };
 
-export default QuestionStage;
+export default React.memo(QuestionStage);

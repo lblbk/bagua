@@ -64,4 +64,4 @@ const Header = ({ yangSetting, toggleYangSetting, disabled, isDarkMode, toggleDa
   );
 };
 
-export default Header;
+export default React.memo(Header);
