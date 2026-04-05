@@ -30,6 +30,7 @@ function App() {
   const [finalGuaInfo, setFinalGuaInfo] = useState(null);
   const [hexagramDetails, setHexagramDetails] = useState([]);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [currentRecordId, setCurrentRecordId] = useState(null);
 
   const coinRefs = useRef([React.createRef(), React.createRef(), React.createRef()]);
   const activeRoundId = useRef(0);
@@ -38,6 +39,45 @@ function App() {
   const roundCounter = useRef(1);
   const timerRef = useRef(null);
   const captureRef = useRef(null);
+
+  useEffect(() => {
+    const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const applyTheme = () => {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme) {
+        // 如果用户手动设过，按手动
+        const isDark = savedTheme === 'dark';
+        setIsDarkMode(isDark);
+        document.documentElement.classList.toggle('dark', isDark);
+      } else {
+        // 否则跟随系统
+        const systemDark = themeMedia.matches;
+        setIsDarkMode(systemDark);
+        document.documentElement.classList.toggle('dark', systemDark);
+      }
+    };
+
+    applyTheme();
+
+    // 监听系统主题变化
+    const listener = (e) => {
+      if (!localStorage.getItem('theme')) { // 只有没手动设置时才跟随变化
+        setIsDarkMode(e.matches);
+        document.documentElement.classList.toggle('dark', e.matches);
+      }
+    };
+
+    themeMedia.addEventListener('change', listener);
+    return () => themeMedia.removeEventListener('change', listener);
+  }, []);
+
+  const toggleDarkMode = () => {
+    const next = !isDarkMode;
+    setIsDarkMode(next);
+    localStorage.setItem('theme', next ? 'dark' : 'light');
+    document.documentElement.classList.toggle('dark', next);
+  };
 
   const loadPastRecord = (record) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -74,13 +114,6 @@ function App() {
     const findD = (name) => hexagramDetails.find(d => d.title.includes(name));
     return { currentDetail: findD(finalGuaInfo.benGua.name), zhiDetail: finalGuaInfo.zhiGua ? findD(finalGuaInfo.zhiGua.name) : null };
   }, [finalGuaInfo, hexagramDetails]);
-
-  const toggleDarkMode = () => {
-    const next = !isDarkMode;
-    setIsDarkMode(next);
-    localStorage.setItem('theme', next ? 'dark' : 'light');
-    document.documentElement.classList.toggle('dark', next);
-  };
 
   const executeRestart = (clearAll = true) => {
     setHistory([]);
