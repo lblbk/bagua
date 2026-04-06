@@ -1,152 +1,177 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { createPortal } from 'react-dom'; // 必须引入
-import { toPng } from 'html-to-image';
-import { createShareRecord } from '../utils/api';
+import { createPortal } from 'react-dom';
+import { createShareRecord } from '../utils/apiService';
+import constants from '../data/constants.json';
 
-// --- 独立的 Toast 组件，通过 Portal 渲染到 Body ---
-const GlobalToast = ({ message, isLoading }) => {
+const { toolBox, common } = constants;
+
+// --- 1. Toast 组件 ---
+const GlobalToast = ({ message, type = 'success' }) => {
+  const isWarning = type === 'warning';
   return createPortal(
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 999999,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      pointerEvents: 'none'
-    }}>
-      <div style={{
-        backgroundColor: 'rgba(30, 41, 59, 0.95)',
-        color: 'white',
-        padding: '16px 24px',
-        borderRadius: '16px',
-        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '12px',
-        pointerEvents: 'auto',
-        border: '1px solid rgba(255,255,255,0.1)',
-        minWidth: '200px',
-        animation: 'toastIn 0.3s ease-out'
-      }}>
-        {isLoading && (
-          <div style={{
-            width: '24px',
-            height: '24px',
-            border: '3px solid rgba(255,255,255,0.3)',
-            borderTopColor: '#10b981',
-            borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite'
-          }} />
-        )}
-        <span style={{ fontSize: '15px', fontWeight: 'bold', textAlign: 'center' }}>{message}</span>
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none p-6 text-center">
+      <div className="bg-white/80 dark:bg-slate-800/90 backdrop-blur-xl border border-white dark:border-slate-700 px-6 py-4 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] flex items-center gap-3 animate-toastBounce pointer-events-auto max-w-[90%]">
+        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white text-lg shadow-lg ${isWarning ? 'bg-amber-500 shadow-amber-500/30' : 'bg-emerald-500 shadow-emerald-500/30'}`}>
+          {isWarning ? '!' : '✓'}
+        </div>
+        <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{message}</span>
       </div>
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes toastIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-      `}</style>
     </div>,
-    document.body // 强制传送到 body 根节点
+    document.body
   );
 };
 
-const ToolBox = ({ finalGuaInfo, question, targetRef, history, aiResponse }) => {
-  const [toast, setToast] = useState({ show: false, msg: '', loading: false });
-  const [previewImage, setPreviewImage] = useState(null);
+const LoadingIcon = () => (
+  <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+);
 
-  // 控制 Toast 消失
+// --- 2. 分享引导弹窗 ---
+const ShareModal = ({ isOpen, onClose, onCopy, shareUrl }) => {
+  if (!isOpen) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" onClick={onClose}></div>
+      <div className="relative w-full max-w-[280px] bg-white dark:bg-slate-900 rounded-[32px] shadow-2xl p-6 animate-scaleUp border border-white dark:border-slate-800">
+        <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/20 rounded-full flex items-center justify-center mb-4 mx-auto text-3xl">🔗</div>
+        <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 text-center mb-2">{toolBox.share}</h3>
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center mb-6 break-all px-4 leading-relaxed line-clamp-2">{shareUrl}</p>
+        <div className="flex flex-col gap-2">
+          <button onClick={() => onCopy(shareUrl)} className="w-full py-4 rounded-2xl text-sm font-bold text-white bg-indigo-600 shadow-xl shadow-indigo-500/40 active:scale-95 transition-all">
+            {toolBox.shareLink}
+          </button>
+          <button onClick={onClose} className="w-full py-3 rounded-2xl text-xs font-bold text-slate-400">{common.cancel}</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+// --- 3. ToolBox 主组件 ---
+const ToolBox = ({ finalGuaInfo, question, targetRef, history, aiResponse, isSharedMode }) => {
+  const [toast, setToast] = useState({ msg: '', type: 'success' });
+  const [isSharing, setIsSharing] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+
   useEffect(() => {
-    if (toast.show && !toast.loading) {
-      const timer = setTimeout(() => setToast({ show: false, msg: '', loading: false }), 3000);
+    if (toast.msg) {
+      const timer = setTimeout(() => setToast({ msg: '', type: 'success' }), 3000);
       return () => clearTimeout(timer);
     }
   }, [toast]);
 
-  const copyToClipboard = async (text) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch (err) {
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      return true;
-    }
+  const showToast = (msg, type = 'success') => setToast({ msg, type });
+
+  const syncCopy = (text) => {
+    const input = document.createElement('input');
+    input.value = text;
+    input.setAttribute('readonly', '');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.focus();
+    input.setSelectionRange(0, 9999);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(input);
+    return ok;
   };
 
-  const handleShare = useCallback(async () => {
-    // 1. 立即弹出正在处理
-    setToast({ show: true, msg: '正在生成专属分享链接...', loading: true });
+  const formatTemplate = (template) => {
+    return template
+      .replace('{question}', question || '无')
+      .replace('{benGua}', finalGuaInfo.benGua.commonName)
+      .replace('{zhiGua}', finalGuaInfo.zhiGua ? `${finalGuaInfo.zhiGua.commonName}` : '');
+  };
 
+  // --- 按钮独立处理逻辑 ---
+
+  const handleSaveImageClick = () => {
+    if (isSharedMode) return showToast("预览模式下无法保存图片", "warning");
+    showToast("保存图片功能即将上线", "warning");
+  };
+
+  const handleShareClick = async () => {
+    if (isSharedMode) return showToast("预览模式下无法再次分享", "warning");
+    if (isSharing) return;
+    setIsSharing(true);
     try {
       const shareData = { question, history, finalGuaInfo, aiResponse: aiResponse || '' };
       const hashId = await createShareRecord(shareData);
-
-      if (!hashId) throw new Error("服务器返回空");
-
-      const shareUrl = `${window.location.origin}/?share=${hashId}`;
-
-      // 2. 核心修改：不再强行调用 navigator.share (因为它在异步中必崩)
-      // 改为自动复制链接
-      await copyToClipboard(shareUrl);
-
-      // 3. 成功后更新 Toast 状态
-      setToast({ show: true, msg: '✅ 分享链接已复制到剪贴板，快去粘贴给好友吧！', loading: false });
-
+      if (hashId) {
+        setShareUrl(`${window.location.origin}/?share=${hashId}`);
+        setIsModalOpen(true);
+      }
     } catch (err) {
-      console.error("分享出错:", err);
-      setToast({ show: true, msg: '❌ 分享失败，请重试', loading: false });
-    }
-  }, [question, history, finalGuaInfo, aiResponse]);
-
-  const handleSaveImage = async () => {
-    setToast({ show: true, msg: '正在生成长图...', loading: true });
-    try {
-      const dataUrl = await toPng(targetRef.current, { cacheBust: true, pixelRatio: 2 });
-      setPreviewImage(dataUrl);
-      setToast({ show: false, msg: '', loading: false });
-    } catch (e) {
-      setToast({ show: true, msg: '❌ 生成图片失败', loading: false });
+      showToast('❌ 生成失败');
+    } finally {
+      setIsSharing(false);
     }
   };
 
+  const handleCopyClick = () => {
+    if (isSharedMode) return showToast("预览模式下无法复制文字", "warning");
+    const content = formatTemplate(toolBox.copyTemplate);
+    if (syncCopy(content)) showToast(toolBox.copySuccess);
+  };
+
   return (
-    <div className="w-full bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-xl mt-6 border border-slate-100 dark:border-slate-700">
-      <div className="grid grid-cols-3 gap-4">
-        <button onClick={handleSaveImage} className="flex flex-col items-center gap-2">
-          <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-2xl">🖼️</div>
-          <span className="text-xs font-bold text-slate-500">保存图片</span>
-        </button>
+    <div className="w-full relative">
+      {/* 移除容器上的 group 类，防止子元素联动动画 */}
+      <div className={`w-full bg-white dark:bg-slate-800 rounded-[32px] p-6 shadow-xl border border-slate-100 dark:border-slate-700/50 transition-all ${isSharedMode ? 'opacity-60' : ''}`}>
 
-        <button onClick={handleShare} className="flex flex-col items-center gap-2">
-          <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-2xl">🔗</div>
-          <span className="text-xs font-bold text-slate-500">一键分享</span>
-        </button>
+        <div className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-800 pb-2 select-none">
+          <h3 className="text-slate-700 dark:text-slate-300 font-black text-lg tracking-widest flex-1">
+            {toolBox.title}
+          </h3>
+          {isSharedMode && (
+            <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 text-[9px] rounded-lg font-bold uppercase">
+              Preview
+            </span>
+          )}
+        </div>
 
-        <button onClick={() => {
-          copyToClipboard(`卦象：${finalGuaInfo.benGua.commonName}`).then(() =>
-            setToast({ show: true, msg: '✅ 卦辞已复制', loading: false })
-          );
-        }} className="flex flex-col items-center gap-2">
-          <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/30 rounded-full flex items-center justify-center text-2xl">📋</div>
-          <span className="text-xs font-bold text-slate-500">复制文字</span>
-        </button>
+        <div className="grid grid-cols-3 gap-4">
+          {/* 保存图片按钮：改为 active:scale-90 */}
+          <button onClick={handleSaveImageClick} className="flex flex-col items-center gap-2 outline-none">
+            <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl flex items-center justify-center text-2xl active:scale-90 transition-all">
+              🖼️
+            </div>
+            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">{toolBox.saveImage}</span>
+          </button>
+
+          {/* 分享链接按钮：改为 active:scale-90 */}
+          <button onClick={handleShareClick} className="flex flex-col items-center gap-2 outline-none">
+            <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl flex items-center justify-center text-2xl active:scale-90 transition-all text-emerald-500">
+              {isSharing ? <LoadingIcon /> : "🔗"}
+            </div>
+            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">{toolBox.share}</span>
+          </button>
+
+          {/* 复制文字按钮：改为 active:scale-90 */}
+          <button onClick={handleCopyClick} className="flex flex-col items-center gap-2 outline-none">
+            <div className="w-14 h-14 bg-amber-50 dark:bg-amber-900/20 rounded-2xl flex items-center justify-center text-2xl active:scale-90 transition-all">📋</div>
+            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">{toolBox.copy}</span>
+          </button>
+        </div>
       </div>
 
-      {/* --- 全局提示：Portal 渲染 --- */}
-      {toast.show && <GlobalToast message={toast.msg} isLoading={toast.loading} />}
+      {/* 其他弹窗组件 */}
+      <ShareModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCopy={(url) => {
+        if (syncCopy(url)) { showToast(toolBox.shareLinkCopied); setIsModalOpen(false); }
+      }} shareUrl={shareUrl} />
 
-      {/* 图片预览 Modal */}
-      {previewImage && (
-        <div className="fixed inset-0 z-[99999] bg-black/95 p-4 flex flex-col items-center justify-center">
-          <img src={previewImage} className="max-w-full max-h-[80vh] rounded-xl shadow-2xl" />
-          <button onClick={() => setPreviewImage(null)} className="mt-8 bg-white text-black px-10 py-3 rounded-full font-bold">关闭预览</button>
-        </div>
-      )}
+      {toast.msg && <GlobalToast message={toast.msg} type={toast.type} />}
+
+      <style>{`
+        @keyframes toastBounce {
+          0% { opacity: 0; transform: translateY(30px) scale(0.9); }
+          50% { opacity: 1; transform: translateY(-5px) scale(1.02); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleUp { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+      `}</style>
     </div>
   );
 };

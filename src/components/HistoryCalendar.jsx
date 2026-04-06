@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { getHistoryLogs, deleteHistoryRecord, clearAllHistory } from '../utils/storage';
+import { getHistoryLogs, deleteHistoryRecord, clearAllHistory, cleanupOldHistory } from '../utils/storage';
 import constants from '../data/constants.json';
 
 const HistoryCalendar = ({ onSelectRecord, refreshTrigger }) => {
@@ -9,6 +9,12 @@ const HistoryCalendar = ({ onSelectRecord, refreshTrigger }) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const { historyCalendar } = constants;
+
+    useEffect(() => {
+        // 启动时清理一周前的旧数据并获取最新数据
+        const cleanData = cleanupOldHistory();
+        setLogs(cleanData);
+    }, []);
 
     // 性能优化：使用 useCallback 稳定函数引用
     const refreshData = useCallback(() => {

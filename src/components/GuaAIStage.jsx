@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { fetchAIInterpretation, generateDivinationPrompt } from '../utils/aiService';
+import { fetchAIInterpretation, generateDivinationPrompt } from '../utils/apiService';
 import { getHistoryLogs } from '../utils/storage'; // 引入你的 storage 方法
 import constants from '../data/constants.json';
 import { getHexagramDetailByName } from '../data/hexagramDict';

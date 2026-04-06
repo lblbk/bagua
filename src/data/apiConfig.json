@@ -1,5 +1,6 @@
 {
-  "workerUrl": "https://webagua.lblbk.top/ai",
+  "workerShareUrl": "https://webagua.lblbk.top/share",
+  "workerAiUrl": "https://webagua.lblbk.top/ai",
   "providers": {
     "aliyun": {
       "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
