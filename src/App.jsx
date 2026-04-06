@@ -7,7 +7,7 @@ import { getShareRecord } from './utils/apiService';
 import { useTheme } from './hooks/useTheme';
 import { useDivination } from './hooks/useDivination';
 
-// Components (假设这些都已在各自文件中用 React.memo 包裹)
+// Components
 import Header from './components/Header';
 import Footer from './components/Footer';
 import QuestionStage from './components/QuestionStage';
@@ -21,7 +21,6 @@ import ToolBox from './components/ToolBox';
 import ConfirmModal from './components/ConfirmModal';
 
 function App() {
-  // 1. UI 状态
   const [question, setQuestion] = useState('');
   const [isQuestionLocked, setIsQuestionLocked] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -30,26 +29,26 @@ function App() {
   const [selectedMode, setSelectedMode] = useState('full');
   const [yangSetting, setYangSetting] = useState('heads');
   const [isSharedMode, setIsSharedMode] = useState(false);
+
+  // 【新增】在 App 层专门维护当前操作的真实记录 ID
+  const [activeRecordId, setActiveRecordId] = useState(null);
   const isLoadingHistory = useRef(false);
 
   const captureRef = useRef(null);
   const { isDarkMode, toggleDarkMode } = useTheme();
 
-  // 2. 核心起卦逻辑 Hook
   const {
     status, setStatus, history, setHistory, finalGuaInfo, setFinalGuaInfo,
     isAutoSequence, setIsAutoSequence, currentRecordId, setCurrentRecordId,
     coinRefs, executeRestart, startRound, stopRound, handleCoinFinish
   } = useDivination(question, yangSetting, selectedMode, useCallback((id, nextHistory, finalInfo) => {
     if (isLoadingHistory.current) return;
-    // 使用 useCallback 包裹，并将 question 作为依赖项
+    // 起新卦完成后，保存真实的 ID
+    setActiveRecordId(id);
     saveHistoryToLocal({ id, question, history: nextHistory, finalGuaInfo: finalInfo, aiResponse: '' });
     setRefreshCalendar(v => v + 1);
   }, [question]));
 
-  // 3. 数据初始化（现在已移到外部，useEffect可以移除）
-
-  // 4. 计算当前卦象详情
   const { currentDetail, zhiDetail } = useMemo(() => {
     if (!finalGuaInfo) return { currentDetail: null, zhiDetail: null };
     return {
@@ -57,10 +56,6 @@ function App() {
       zhiDetail: finalGuaInfo.zhiGua ? getHexagramDetailByName(finalGuaInfo.zhiGua.name) : null
     };
   }, [finalGuaInfo]);
-
-
-  // ================= 重点修改区域开始 =================
-  // 5. 业务处理函数 (使用 useCallback 优化)
 
   const handleToggleYangSetting = useCallback(() => {
     if (status === 'idle' || status === 'finished') {
@@ -72,14 +67,18 @@ function App() {
     isLoadingHistory.current = true;
     window.scrollTo({ top: 0, behavior: 'smooth' });
     executeRestart(false);
+
     setQuestion(record.question);
     setIsQuestionLocked(true);
     setHistory(record.history);
     setFinalGuaInfo(record.finalGuaInfo);
     setAiResponse(record.aiResponse || '');
-    setCurrentRecordId(record.id);
-    setStatus('finished');
 
+    // 【关键】强制锁定我们在操作的历史 ID
+    setActiveRecordId(record.id);
+    setCurrentRecordId(record.id); // 顺便同步给 hook
+
+    setStatus('finished');
     setIsSharedMode(fromShare);
 
     setTimeout(() => {
@@ -87,13 +86,11 @@ function App() {
     }, 100);
   }, [executeRestart, setHistory, setFinalGuaInfo, setCurrentRecordId, setStatus]);
 
-
   useEffect(() => {
     const checkShareLink = async () => {
       const params = new URLSearchParams(window.location.search);
       const shareId = params.get('share');
       if (!shareId) return;
-
       const record = await getShareRecord(shareId);
       if (record) {
         loadPastRecord(record, true);
@@ -104,10 +101,11 @@ function App() {
 
   const handleSaveAfterAI = useCallback((finalAiText) => {
     setAiResponse(finalAiText);
-    if (!currentRecordId) return;
-    saveHistoryToLocal({ id: currentRecordId, question, history, finalGuaInfo, aiResponse: finalAiText });
+    // 【关键】使用 App 层保护的 activeRecordId，而不是可能被污染的 currentRecordId
+    if (!activeRecordId) return;
+    saveHistoryToLocal({ id: activeRecordId, question, history, finalGuaInfo, aiResponse: finalAiText });
     setRefreshCalendar(v => v + 1);
-  }, [currentRecordId, question, history, finalGuaInfo]);
+  }, [activeRecordId, question, history, finalGuaInfo]);
 
   const handleQuestionSubmit = useCallback((q) => {
     setQuestion(q);
@@ -116,6 +114,7 @@ function App() {
 
   const handleQuestionRestart = useCallback(() => {
     setIsSharedMode(false);
+    setActiveRecordId(null); // 清理 ID
     if (status === 'finished') {
       executeRestart(true);
       setQuestion('');
@@ -131,6 +130,7 @@ function App() {
   const handleConfirmClose = useCallback(() => setShowConfirm(false), []);
 
   const handleConfirmAction = useCallback(() => {
+    setActiveRecordId(null); // 清理 ID
     executeRestart(true);
     setQuestion('');
     setIsQuestionLocked(false);
@@ -153,10 +153,8 @@ function App() {
   }, [status, selectedMode, setIsAutoSequence, startRound, stopRound]);
 
   return (
-    // 优化 1: 从 className 中移除了 "transition-colors duration-500"，这是卡顿的主要原因
     <div
       className="min-h-screen w-full bg-slate-50 dark:bg-slate-900 pt-4 pb-10"
-      // 优化 2: 增加 style 属性来开启硬件加速，让滚动更流畅
       style={{ transform: 'translateZ(0)', WebkitOverflowScrolling: 'touch' }}
     >
       <div ref={captureRef} className="w-full max-w-md px-4 flex flex-col items-center gap-4 mx-auto relative">
@@ -182,7 +180,6 @@ function App() {
         />
 
         {isQuestionLocked && (
-          // 优化 3: 为这个即将出现动画的容器添加 will-change 提示
           <div
             className="w-full flex flex-col gap-6 animate-fadeIn"
             style={{ willChange: 'transform, opacity' }}
@@ -205,6 +202,7 @@ function App() {
                   detail={currentDetail} zhiDetail={zhiDetail} history={history}
                   finalGuaInfo={finalGuaInfo} question={question}
                   savedResponse={aiResponse} onSaveRecord={handleSaveAfterAI}
+                  isSharedMode={isSharedMode}
                 />
                 <ToolBox
                   finalGuaInfo={finalGuaInfo}
@@ -213,6 +211,7 @@ function App() {
                   history={history}
                   aiResponse={aiResponse}
                   isSharedMode={isSharedMode}
+                  onSaveRecord={handleSaveAfterAI}
                 />
               </>
             )}

@@ -117,7 +117,8 @@
         "shareLinkCopied": "链接已复制，去粘贴给朋友吧！",
         "copy": "复制卦象",
         "copyTemplate": "问卦：{question}\n卦象：本卦【{benGua}】, 之卦【{zhiGua}】\n—— 变动不居，周流六虚，唯变所适",
-        "copySuccess": "复制文本"
+        "copySuccess": "复制文本",
+        "fateEndText": "此卦缘分已尽"
     },
     "footer": {
         "title": "易经 · 六爻占卜",

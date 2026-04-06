@@ -2,6 +2,17 @@
 const STORAGE_KEY = 'divination_history_logs';
 
 /**
+ * 【新增】统一的时间格式化工具：确保只取本地时间的 YYYY-MM-DD
+ * 避免 toISOString() 带来的时区偏差问题
+ */
+const getLocalDateKey = (dateObj) => {
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+/**
  * 获取原始数据
  */
 export const getHistoryLogs = () => {
@@ -15,34 +26,35 @@ export const getHistoryLogs = () => {
 
 /**
  * 核心功能：清理一周前的记录
- * 返回清理后的数据
+ * 真正清理并释放 localStorage 空间
  */
 export const cleanupOldHistory = () => {
     try {
         const allLogs = getHistoryLogs();
-        const today = new Date();
         const validDates = [];
 
-        // 生成最近 7 天的日期 Key 列表 (包含今天)
+        // 生成最近 7 天的本地日期 Key 列表 (包含今天)
         for (let i = 0; i < 7; i++) {
             const d = new Date();
-            d.setDate(today.getDate() - i);
-            validDates.push(d.toISOString().split('T')[0]);
+            d.setDate(d.getDate() - i);
+            validDates.push(getLocalDateKey(d)); // 使用统一的本地时间生成
         }
 
         const filteredLogs = {};
         let hasChanged = false;
 
-        // 只保留存在于最近 7 天列表中的数据
+        // 遍历历史记录
         Object.keys(allLogs).forEach(dateKey => {
             if (validDates.includes(dateKey)) {
+                // 如果是最近 7 天的记录，保留
                 filteredLogs[dateKey] = allLogs[dateKey];
             } else {
-                hasChanged = true; // 发现了旧数据
+                // 如果不是，丢弃（这就起到了真正的删除/释放空间作用）
+                hasChanged = true;
             }
         });
 
-        // 只有在数据真正发生变化时才写回 localStorage，优化性能
+        // 仅在删除了过期数据时，才覆写 localStorage 释放空间
         if (hasChanged) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredLogs));
         }
@@ -59,25 +71,33 @@ export const cleanupOldHistory = () => {
  */
 export const saveHistoryToLocal = (record) => {
     try {
-        // 保存前先跑一遍清理，确保空间可用
-        const allLogs = cleanupOldHistory();
+        const allLogs = getHistoryLogs();
+        const targetId = Number(record.id); // 统一转为数字
+        let updated = false;
 
-        const date = new Date(record.id);
-        const dateKey = date.toISOString().split('T')[0];
+        // 1. 【全局搜索并更新】
+        for (const dateKey of Object.keys(allLogs)) {
+            const index = allLogs[dateKey].findIndex(item => Number(item.id) === targetId);
+            if (index > -1) {
+                allLogs[dateKey][index] = {
+                    ...allLogs[dateKey][index],
+                    ...record,
+                    updatedAt: Date.now()
+                };
+                updated = true;
+                break;
+            }
+        }
 
-        if (!allLogs[dateKey]) allLogs[dateKey] = [];
+        // 2. 如果全局都没找到，作为【新记录】插入
+        if (!updated) {
+            // 使用统一的函数生成时间的 Key
+            const dateKey = getLocalDateKey(new Date(targetId));
 
-        const existingIndex = allLogs[dateKey].findIndex(item => item.id === record.id);
-
-        if (existingIndex > -1) {
-            allLogs[dateKey][existingIndex] = {
-                ...allLogs[dateKey][existingIndex],
-                ...record,
-                updatedAt: Date.now()
-            };
-        } else {
+            if (!allLogs[dateKey]) allLogs[dateKey] = [];
             allLogs[dateKey].unshift({ ...record, timestamp: record.id });
-            // 限制每天最多3条
+
+            // 每天限制最多保留 3 条
             allLogs[dateKey] = allLogs[dateKey].slice(0, 3);
         }
 
@@ -94,7 +114,7 @@ export const deleteHistoryRecord = (id) => {
     const data = getHistoryLogs();
     Object.keys(data).forEach(date => {
         data[date] = data[date].filter(item => item.id !== id);
-        if (data[date].length === 0) delete data[date];
+        if (data[date].length === 0) delete data[date]; // 如果数组空了，连键名也删掉
     });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 };
