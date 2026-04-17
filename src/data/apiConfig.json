@@ -13,7 +13,7 @@
       "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
       "apiKeyEnv": "VOLCENGINE_API_KEY",
       "models": {
-        "bagua-seed-1.8": "ep-20260323095003-657zc"
+        "bagua-seed-1.8": "ep-20260417110456-xdlzq"
       }
     }
   },
