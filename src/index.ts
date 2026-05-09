@@ -55,7 +55,7 @@ export default {
 async function handleAiRequest(request: Request, env: Env): Promise<Response> {
   const { prompt, modelId, baseUrl, apiKeyEnv } = await request.json<any>();
 
-  const allowedDomains = ["dashscope.aliyuncs.com", "ark.cn-beijing.volces.com"];
+  const allowedDomains = ["dashscope.aliyuncs.com", "ark.cn-beijing.volces.com", "openrouter.ai"];
   if (!allowedDomains.some(d => baseUrl.includes(d))) {
     return new Response("Forbidden URL", { status: 403, headers: corsHeaders });
   }
