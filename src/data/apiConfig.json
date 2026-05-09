@@ -15,10 +15,17 @@
       "models": {
         "bagua-seed-1.8": "ep-20260417110456-xdlzq"
       }
+    },
+    "openrouter": {
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "apiKeyEnv": "OPENROUTER_API_KEY",
+      "models": {
+        "ring-2.6-1t": "inclusionai/ring-2.6-1t:free"
+      }
     }
   },
   "defaultConfig": {
-    "provider": "volcengine",
-    "modelKey": "bagua-seed-1.8"
+    "provider": "openrouter",
+    "modelKey": "ring-2.6-1t"
   }
 }

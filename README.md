@@ -21,14 +21,14 @@ npm run dev
 
 ```
 # powershell 
-$env:VITE_VOLCENGINE_API_KEY=""
+$env:VOLCENGINE_API_KEY=""
 
 # linux/mac
-export VITE_VOLCENGINE_API_KEY=""
+export VOLCENGINE_API_KEY=""
 ```
 
 ## AI 解读
 
 添加环境变量
 
-`VITE_DASHSCOPE_API_KEY` 或者 `VITE_VOLCENGINE_API_KEY`
+`DASHSCOPE_API_KEY` 、 `VOLCENGINE_API_KEY` 或者 `OPENROUTER_API_KEY`
